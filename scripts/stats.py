@@ -1,10 +1,10 @@
 import json,csv,collections,math,sys
 sys.path.insert(0,'scripts')
 from solver2 import solve as solve2
-BEST=dict(hidden_blocks=True,hidden_tappable=True,corner_side=False,pipe_side=True,delay=True)
+BEST={}
 L=json.load(open('data/levels.json'))
 DV={1:(0,1),2:(0,-1),3:(1,0),4:(-1,0)}
-KN={1:'arrow',2:'box',3:'pipe',4:'corner',8:'band',11:'key',12:'curtain',18:'locked'}
+KN={1:'arrow',2:'box',3:'pipe',4:'corner',8:'band',11:'key',12:'elevator',18:'curtain'}
 def solve(arrows,W,H):
     """arrows: list of items. returns (depth, stuck, free0, blockers_mean, longest_ray, order_levels)"""
     owner={}
@@ -39,6 +39,10 @@ for x in L:
     ar=[i for i in its if i['kind']==1]
     nested=[s for i in its if i['kind']==12 for s in i.get('items',[]) if s['kind']==1]
     kc=collections.Counter(KN[i['kind']] for i in its)
+    for i in its:
+        if i['kind']==12:
+            for sub_ in i.get('items',[]):
+                if sub_['kind']!=1: kc[KN[sub_['kind']]]+=1
     lens=[len(a['occupiedPositions']) for a in ar] or [0]
     s1=solve(ar,W,H) if ar else dict(depth=0,stuck=0,free0=0,dep_mean=0,dep_max=0,n=0)
     s2=solve(nested,W,H) if nested else dict(depth=0,stuck=0,free0=0,dep_mean=0,dep_max=0,n=0)
@@ -46,10 +50,11 @@ for x in L:
     dirs=collections.Counter(a['direction'] for a in ar)
     cols=set(a.get('colorId') for a in ar)|set(a.get('colorId') for a in nested)
     tr=[turns(a['occupiedPositions']) for a in ar] or [0]
-    box_hp=sum(i.get('health',0) for i in its if i['kind']==2)
-    pipe_hp=sum(i.get('health',0) for i in its if i['kind']==3)
-    curtain_cells=sum(len(i['occupiedPositions']) for i in its if i['kind']==12)
-    locked_hp=sum(i.get('health',0) for i in its if i['kind']==18)
+    allits=its+[q for i in its if i['kind']==12 for q in i.get('items',[])]
+    box_hp=sum(i.get('health',0) for i in allits if i['kind']==2)
+    pipe_hp=sum(i.get('health',0) for i in allits if i['kind']==3)
+    elevator_cells=sum(len(i['occupiedPositions']) for i in its if i['kind']==12)
+    curtain_keys=sum(i.get('health',0) for i in its if i['kind']==18)
     r2=solve2(x,**BEST)
     rows.append(dict(
         global_id=x['global_id'],set=x['set'],set_index=x['set_index'],levelId=x['levelId'],
@@ -59,14 +64,13 @@ for x in L:
         len_mean=round(sum(lens)/len(lens),2),len_max=max(lens),len_min=min(lens),turns_mean=round(sum(tr)/len(tr),2),turns_max=max(tr),
         dir_up=dirs[1],dir_down=dirs[2],dir_right=dirs[3],dir_left=dirs[4],
         colors=len(cols-{None})+(1 if None in cols else 0),
-        box=kc['box'],pipe=kc['pipe'],corner=kc['corner'],band=kc['band'],key=kc['key'],curtain=kc['curtain'],locked=kc['locked'],
-        box_hp=box_hp,pipe_hp=pipe_hp,locked_hp=locked_hp,curtain_cells=curtain_cells,
-        special_kinds=sum(1 for k in ('box','pipe','corner','band','key','curtain','locked') if kc[k]),
+        box=kc['box'],pipe=kc['pipe'],corner=kc['corner'],band=kc['band'],key=kc['key'],elevator=kc['elevator'],curtain=kc['curtain'],
+        box_hp=box_hp,pipe_hp=pipe_hp,curtain_keys=curtain_keys,elevator_cells=elevator_cells,
+        special_kinds=sum(1 for k in ('box','pipe','corner','band','key','elevator','curtain') if kc[k]),
         depth_basic=s1['depth'],solved2=int(r2['solved']),rounds2=r2['rounds'],left2=r2['left'],
         depth=r2['rounds'],stuck=r2['left'],free0=s1['free0'],free0_ratio=round(s1['free0']/s1['n'],4) if s1['n'] else 0,
         dep_mean=round(s1['dep_mean'],2),dep_max=s1['dep_max'],
-        nested_depth=s2['depth'],nested_stuck=s2['stuck'],
-        total_depth=r2['rounds'],total_stuck=r2['left'],
+                total_stuck=r2['left'],
         total_items=len(its)+len(nested)))
 json.dump(rows,open('data/stats.json','w'),separators=(',',':'))
 with open('data/stats.csv','w',newline='') as f:

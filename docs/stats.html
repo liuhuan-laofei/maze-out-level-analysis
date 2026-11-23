@@ -12,10 +12,10 @@
 <h2>4. 分布</h2>
 <div class="grid g2" id="dist"></div>
 <h2>5. 极值榜</h2>
-<div class="grid g2"><div><h3>依赖深度 Top 10（可完全清空）</h3><div class="tbl"><table id="tDepth"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 depth 降序取前 10；depth 相同按主线编号升序</div><dl><dt>depth</dt><dd>依赖深度（定义见“依赖深度”图）</dd><dt>范围</dt><dd>只含求解器能清空的关卡，排除 #511</dd></dl></div></details></div><div><h3>箭头数 Top 10</h3><div class="tbl"><table id="tArrows"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 arrows 降序取前 10；同值按主线编号升序</div><dl><dt>arrows</dt><dd>顶层箭头条数（kind=1），不含电梯嵌套箭头</dd></dl></div></details></div>
+<div class="grid g2"><div><h3>依赖深度 Top 10（可完全清空）</h3><div class="tbl"><table id="tDepth"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 depth 降序取前 10；depth 相同按主线编号升序</div><dl><dt>depth</dt><dd>依赖深度（定义见“依赖深度”图）</dd><dt>范围</dt><dd>只含求解器能清空的关卡，本次无排除；若有未解开的关会排除</dd></dl></div></details></div><div><h3>箭头数 Top 10</h3><div class="tbl"><table id="tArrows"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 arrows 降序取前 10；同值按主线编号升序</div><dl><dt>arrows</dt><dd>顶层箭头条数（kind=1），不含电梯嵌套箭头</dd></dl></div></details></div>
 <div><h3>棋盘格数 Top 10</h3><div class="tbl"><table id="tArea"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 area = W × H 降序取前 10；同值按主线编号升序</div><dl><dt>W / H</dt><dd>棋盘宽 / 高（格）</dd></dl></div></details></div><div><h3>占用率 Top 10</h3><div class="tbl"><table id="tDens"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 density = arrow_cells ÷ (W × H) 降序取前 10；同值按主线编号升序</div><dl><dt>arrow_cells</dt><dd>顶层箭头占用的格子总数</dd><dt>W × H</dt><dd>棋盘总格数</dd></dl><div class="w">大量关卡的占用率都是 100%，并列时只按编号排，所以这张榜参考价值有限。</div></div></details></div></div>
 <h2>6. 每 50 关分段均值</h2>
-<div class="tbl"><table id="tBucket"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">每列 = 该 50 关内逐关指标的算术平均（最后一段 751–760 只有 10 关）</div><dl><dt>箭头</dt><dd>arrows 的平均</dd><dt>棋盘格</dt><dd>area = W × H 的平均</dd><dt>占用率</dt><dd>density = arrow_cells ÷ (W × H) 的平均（各关占用率再取均值，不按面积加权）</dd><dt>深度</dt><dd>depth 的平均，含未能清空的 #511（其值为下限）</dd><dt>平均长度</dt><dd>len_mean 的平均，是“各关均值再取均值”，不按箭头数加权</dd><dt>特殊元素种类</dt><dd>special_kinds（0–7）的平均</dd><dt>含特殊元素</dt><dd>special_kinds > 0 的关数 / 该段关卡数</dd></dl></div></details>
+<div class="tbl"><table id="tBucket"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">每列 = 该 50 关内逐关指标的算术平均（最后一段 751–760 只有 10 关）</div><dl><dt>箭头</dt><dd>arrows 的平均</dd><dt>棋盘格</dt><dd>area = W × H 的平均</dd><dt>占用率</dt><dd>density = arrow_cells ÷ (W × H) 的平均（各关占用率再取均值，不按面积加权）</dd><dt>深度</dt><dd>depth 的平均（760 关全部可清空）</dd><dt>平均长度</dt><dd>len_mean 的平均，是“各关均值再取均值”，不按箭头数加权</dd><dt>特殊元素种类</dt><dd>special_kinds（0–7）的平均</dd><dt>含特殊元素</dt><dd>special_kinds > 0 的关数 / 该段关卡数</dd></dl></div></details>
 <footer>数据来源：安装包内置关卡，自绘分析。完整指标见 <a href="data/stats.csv">stats.csv</a>。</footer>
 </main>
 <script src="assets/chart.umd.min.js"></script><script src="assets/common.js"></script>
@@ -31,21 +31,21 @@ const W=t=>`<div class="w">${t}</div>`;
 const SETNOTE='横轴是人为拼接的主线编号 1–760，虚线分隔 A/B/C/D/E 五个集合，每个点是一关，颜色代表所属集合。';
 const HELP={
 '棋盘格数':SETNOTE+F('area = W × H')+DL([['W','棋盘宽度（格）'],['H','棋盘高度（格）']])+'含义：版面总格数，包含空白格。E 集合（October）有大尺寸剪影关，所以右端明显抬高。',
-'顶层箭头数':SETNOTE+F('arrows = #{ item ∈ 关卡 : item.kind = 1 }')+DL([['item.kind = 1','普通箭头元素'],['#{ }','集合元素个数']])+'含义：箭头条数。电梯里的嵌套箭头不计入，单独统计为 nested_arrows。',
+'顶层箭头数':SETNOTE+F('arrows = #{ item ∈ 关卡 : item.kind = 1 }')+DL([['item.kind = 1','普通箭头元素'],['#{ }','集合元素个数']])+'含义：箭头条数。电梯下层的嵌套箭头不计入，单独统计为 nested_arrows。',
 '箭头占用率':SETNOTE+F('density = arrow_cells ÷ (W × H)\narrow_cells = Σ len(path_i)')+DL([['arrow_cells','所有顶层箭头占用的格子总数'],['len(path_i)','第 i 条箭头路径的格数'],['W × H','棋盘总格数']])+'含义：棋盘被箭头填满的程度，1.0 为满铺。E 集合剪影关空白多，所以占用率低。',
 '平均箭头长度':SETNOTE+F('len_mean = arrow_cells ÷ arrows')+DL([['arrow_cells','箭头占用格数总和'],['arrows','顶层箭头条数']])+'含义：每条箭头平均占几格，越大箭头越长、越容易互相穿插。',
-'依赖深度（按元素规则）':SETNOTE+'求解器按轮次模拟：'+F('每一轮：找出所有“此刻能走”的箭头，同时移走\ndepth = 直到清空所需的总轮数')+DL([['能走','沿头部方向的射线能飞出棋盘，途中不被其他未移走的箭头 / 未破碎的盒子挡住'],['水管','射线进入水管入口，会从另一端按固定方向继续飞出，每被穿过一次计数 +1'],['拐角器','射线碰到拐角器会按 direction1/direction2 转向'],['连接箭头','同一束带绑定的箭头成组判断，任一条被挡则整组不能走'],['幕布 / 电梯','幕布按累计钥匙数打开；电梯上的箭头清空后，其下层嵌套箭头才加入'],['轮末结算','水管穿过次数 ≥ health 则破碎；已清除箭头数 ≥ 盒子 health 则盒子破碎']])+'含义：依赖链的最长层数，越大说明“先解外围、再解内部”的层数越多。'+W('它不是玩家要点击的次数，也不是体感难度。空心点表示求解器没能清空该关，数值仅为下限（目前只有 #511）。拐角 demand、盒子/幕布 order 字段尚未建模。')+'纯箭头关（375 个）只受“射线上有没有别的箭头”影响，结果完全确定。',
+'依赖深度（按元素规则）':SETNOTE+'求解器按轮次模拟：'+F('每一轮：找出所有“此刻能走”的箭头，同时移走\ndepth = 直到清空所需的总轮数')+DL([['能走','沿头部方向的射线能飞出棋盘；途中不能被其他未移走的箭头、未解锁的幕布、未破碎的盒子挡住'],['水管','射线从入口进入，从另一端按固定方向继续飞出；每被穿过一次计数 +1，达到 health 破碎'],['拐角器','射线朝 -direction1 飞来转向 direction2，朝 -direction2 飞来转向 direction1（撞弹簧头）；沿 direction1/direction2 飞来则撞到金属底座，被挡'],['连接箭头','同一束带绑定的箭头成组判断，任一条被挡或被盖住则整组不能走'],['幕布','累计钥匙数 ≥ 其（按 order 累加的）health 才解锁；锁定时挡住射线，被盖住的箭头不可点'],['电梯','顶层箭头不再占据电梯格子时，电梯在本轮结束打开，其下层的箭头及钥匙、盒子、水管等下一轮才加入；与钥匙无关'],['轮末结算','水管穿过次数 ≥ health 则破碎；已清除箭头总数 ≥ 盒子 health 则盒子破碎']])+'含义：依赖链的最长层数，越大说明“先解外围、再解内部”的层数越多。'+W('它不是玩家要点击的次数，也不是体感难度。空心点表示求解器没能清空该关，数值仅为下限（现在 760 关全部可清空，该标记目前不会出现）。拐角 demand、盒子 order 字段尚未建模。')+'纯箭头关（375 个）只受“射线上有没有别的箭头”影响，结果完全确定。',
 '首轮可直接走的箭头比例':SETNOTE+F('free0_ratio = free0 ÷ arrows')+DL([['free0','开局时射线上没有任何其他箭头的箭头条数'],['arrows','顶层箭头条数']])+'含义：比例越低，开局可点的箭头越少，需要先找对突破口。'+W('该指标只按“箭头互相阻挡”计算，不含盒子、水管等元素的影响。'),
 '平均转弯数':SETNOTE+F('turns_i = #{ j : 方向(j→j+1) ≠ 方向(j-1→j) }\nturns_mean = Σ turns_i ÷ arrows')+DL([['turns_i','第 i 条箭头路径上，相邻两段方向发生变化的次数'],['j','路径上的格子下标'],['arrows','顶层箭头条数']])+'含义：路径越曲折，视觉上越难读清每条箭头的走向。',
 '配置的难度档分布（difficulty 1–3）':'数据来源：关卡配置里的 <code>difficulty</code> 字段（1–3），不是我算出来的。'+F('柱高 = #{ 关卡 ∈ 集合 : difficulty = v }')+DL([['v','难度档 1 / 2 / 3'],['集合','A、B、C、D']])+'含义：各集合里三档关卡的数量，堆叠显示。E 集合没有该配置，不显示。',
 '依赖深度 vs 箭头数':'每个点是一关（只含可清空的关）：'+DL([['横轴','arrows：顶层箭头数'],['纵轴','depth：依赖深度（定义见上方“依赖深度”图）']])+'含义：深度整体随箭头数上升；明显高于同类点的关卡，是“箭头不多但依赖链更长”的设计。',
 '含各特殊元素的关数（按集合）':F('柱高 = #{ 关卡 ∈ 集合 : 该关里元素 e 的个数 > 0 }')+DL([['e','7 类元素：连接箭头、钥匙、幕布、水管、盒子、拐角器、电梯'],['集合','A–E，堆叠显示']])+W('这里数的是“关数”，不是元素个数；同一关里出现 4 个连接箭头也只算 1 关。')+'数据里只有 A、C 两个集合用了特殊元素。',
-'特殊元素种类数（每 50 关均值）':F('special_kinds = #{ e ∈ 7类元素 : 该关里 e 的个数 > 0 }\n点值 = 该 50 关 special_kinds 的平均')+DL([['special_kinds','一关里同时出现的元素种类数，取值 0–7'],['50 关','按主线编号 1–50、51–100… 分段']])+W('钥匙和幕布分开计：一关同时有钥匙和幕布记 2 种。'),
+'特殊元素种类数（每 50 关均值）':F('special_kinds = #{ e ∈ 7类元素 : 该关里 e 的个数 > 0 }\n点值 = 该 50 关 special_kinds 的平均')+DL([['special_kinds','一关里同时出现的元素种类数，取值 0–7'],['50 关','按主线编号 1–50、51–100… 分段']])+W('钥匙和幕布分开计：一关同时有钥匙和幕布记 2 种。元素计数包含电梯下层的嵌套元素。'),
 '含特殊元素关卡的比例（每 50 关）':F('比例 = #{ 关卡 : special_kinds > 0 } ÷ 该段关卡数 × 100%')+DL([['special_kinds > 0','该关至少有一种特殊元素'],['该段关卡数','50（最后一段 751–760 只有 10 关）']])+'含义：这一段里带机制的关卡占多大比例；B、D、E 集合没有特殊元素，所以对应区间为 0。',
-'A 集合各元素出现关卡（前 300 关，每 25 关）':F('柱高 = #{ 关卡 ∈ [起, 起+24] : 该关里元素 e 的个数 > 0 }，最大 25')+DL([['e','7 类元素之一，每种一个颜色'],['25','分段宽度；柱高 25 表示这 25 关每关都有']])+'含义：观察新机制引入后的使用密度：首次出现后是否持续、占比多大。',
+'A 集合各元素出现关卡（前 300 关，每 25 关）':F('柱高 = #{ 关卡 ∈ [起, 起+24] : 该关里元素 e 的个数 > 0 }，最大 25')+DL([['e','7 类元素之一，每种一个颜色（图例色，与关卡图里一致）'],['25','分段宽度；柱高 25 表示这 25 关每关都有']])+'含义：观察新机制引入后的使用密度：首次出现后是否持续、占比多大。',
 '特殊元素总数量（按集合）':F('总数 = Σ_{关卡 ∈ 集合} count(关卡, e)')+DL([['count(关卡, e)','该关里元素 e 的实例个数'],['集合','只画 A 和 C']])+W('与“关数”不同，这里数的是实例：一关有 4 个连接箭头就算 4。')+'钥匙的实例数就是钥匙个数；盒子、水管按块数计。',
 '箭头数分布':F('柱高 = #{ 关卡 : lo ≤ arrows < hi }')+DL([['arrows','顶层箭头数'],['[lo, hi)','区间，左闭右开，如 40–59 表示 40 ≤ arrows < 60']])+'含义：全部 760 关的箭头数分布。',
-'依赖深度分布（可完全清空的关）':F('柱高 = #{ 关卡 : 可清空 且 lo ≤ depth < hi }')+DL([['depth','依赖深度（定义见“依赖深度”图）'],['可清空','求解器能把全部箭头移走（排除 #511）']])+'含义：全部关卡依赖层数的分布。',
+'依赖深度分布（可完全清空的关）':F('柱高 = #{ 关卡 : 可清空 且 lo ≤ depth < hi }')+DL([['depth','依赖深度（定义见“依赖深度”图）'],['可清空','求解器能把全部箭头移走（本次无排除；若有未解开的关会排除）']])+'含义：全部关卡依赖层数的分布。',
 '箭头方向占比（按集合）':F('占比_d = Σ_{关卡 ∈ 集合} 方向为 d 的箭头数 ÷ Σ_{关卡 ∈ 集合} 全部箭头数 × 100%')+DL([['d','上 / 下 / 右 / 左，由头部方向 direction 1/2/3/4 决定'],['分母','该集合的顶层箭头总数']])+'含义：设计上有没有偏向某个出口方向；四个方向各约 25% 说明基本均衡。',
 '棋盘格数分布':F('柱高 = #{ 关卡 : lo ≤ W×H < hi }')+DL([['W × H','棋盘总格数'],['[lo, hi)','区间，左闭右开']])+'含义：全部关卡的版面大小分布。',
 '最常见的棋盘尺寸 Top 12':F('统计每种 “W×H” 出现的关数，取前 12')+DL([['W×H','棋盘宽 × 高'],['柱高','使用该尺寸的关卡数']])+'含义：设计时常用的版面规格。',
@@ -53,6 +53,7 @@ const HELP={
 };
 function howHTML(t){return HELP[t]?`<details class="how"><summary>这张图怎么算</summary><div class="b">${HELP[t]}</div></details>`:''}
 function box(parent,title,desc){const d=document.createElement('div');d.className='chart';d.innerHTML=`<h3>${title}</h3><p>${desc||''}</p><div class="box"><canvas></canvas></div>${howHTML(title)}`;document.getElementById(parent).appendChild(d);return d.querySelector('canvas')}
+const ECOL={band:'#00c853',key:'#ffc800',curtain:'#c62828',pipe:'#607d8b',box:'#b07c48',corner:'#ab47bc',elevator:'#7c4dff'};
 let R;
 function scatter(parent,title,desc,key,opt={}){
  const cv=box(parent,title,desc);
@@ -81,14 +82,14 @@ loadStats().then(d=>{R=d;
  bar('diff','配置的难度档分布（difficulty 1–3）','包内配置字段，E 集合无配置',labs,[1,2,3].map((v,i)=>({label:'难度 '+v,data:SETS.filter(s=>s.k!=='oct').map(s=>R.filter(x=>x.set===s.k&&x.cfg_difficulty===v).length),backgroundColor:['#86efac','#fcd34d','#f87171'][i]})),{stack:true});
  const sc=document.getElementById('diff');
  // depth vs arrows scatter
- {const cv=box('diff','依赖深度 vs 箭头数','颜色同上；看深度是否只是箭头数的函数');new Chart(cv,{type:'scatter',data:{datasets:SETS.map(s=>({label:s.short,data:R.filter(x=>x.set===s.k&&!x.total_stuck).map(x=>({x:x.arrows,y:x.depth})),backgroundColor:s.color,pointRadius:2.4}))},options:{maintainAspectRatio:false,scales:{x:{title:{display:true,text:'箭头数'}},y:{title:{display:true,text:'深度'}}}}})}
+ {const cv=box('diff','依赖深度 vs 箭头数','颜色代表集合；看深度是否只是箭头数的函数');new Chart(cv,{type:'scatter',data:{datasets:SETS.map(s=>({label:s.short,data:R.filter(x=>x.set===s.k&&!x.total_stuck).map(x=>({x:x.arrows,y:x.depth})),backgroundColor:s.color,pointRadius:2.4}))},options:{maintainAspectRatio:false,scales:{x:{title:{display:true,text:'箭头数'}},y:{title:{display:true,text:'深度'}}}}})}
  // specials
  bar('spec','含各特殊元素的关数（按集合）','只有 A、C 两个集合使用特殊元素',ELEMS.map(e=>e.name.split(' ')[0]),SETS.map(s=>({label:s.short,data:ELEMS.map(e=>R.filter(x=>x.set===s.k&&x[e.k]>0).length),backgroundColor:s.color})),{stack:true});
  const bk=[];for(let i=0;i<760;i+=50)bk.push([i+1,Math.min(i+50,760)]);
  {const cv=box('spec','特殊元素种类数（每 50 关均值）','关卡里同时出现的特殊元素种类');new Chart(cv,{type:'line',data:{labels:bk.map(b=>b[0]+'–'+b[1]),datasets:[{label:'平均特殊元素种类',data:bk.map(b=>mean(R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]).map(x=>x.special_kinds))),borderColor:'#2563eb',tension:.25}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}})}
  bar('spec','含特殊元素关卡的比例（每 50 关）','',bk.map(b=>b[0]+'–'+b[1]),[{label:'含特殊元素比例',data:bk.map(b=>{const r=R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]);return Math.round(r.filter(x=>x.special_kinds>0).length/r.length*1000)/10}),backgroundColor:'#60a5fa'}],{max:100});
  {const cv=box('spec','A 集合各元素出现关卡（前 300 关，每 25 关）','看机制引入顺序和密度');const bs=[];for(let i=0;i<300;i+=25)bs.push([i+1,i+25]);
-  new Chart(cv,{type:'bar',data:{labels:bs.map(b=>b[0]+'–'+b[1]),datasets:ELEMS.map((e,i)=>({label:e.name.split(' ')[0],data:bs.map(b=>R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]&&x[e.k]>0).length),backgroundColor:['#b07c48','#78909c','#ab47bc','#00c853','#ffd600','#7c4dff','#d32f2f'][i]}))},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:25}}}})}
+  new Chart(cv,{type:'bar',data:{labels:bs.map(b=>b[0]+'–'+b[1]),datasets:ELEMS.map((e,i)=>({label:e.name.split(' ')[0],data:bs.map(b=>R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]&&x[e.k]>0).length),backgroundColor:ECOL[e.k]}))},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:25}}}})}
  {const cv=box('spec','特殊元素总数量（按集合）','每套集合里各元素的实例数（含箱子、管道等）');
   new Chart(cv,{type:'bar',data:{labels:ELEMS.map(e=>e.name.split(' ')[0]),datasets:SETS.filter(s=>s.k==='main300'||s.k==='loop200').map(s=>({label:s.short,data:ELEMS.map(e=>R.filter(x=>x.set===s.k).reduce((a,x)=>a+x[e.k],0)),backgroundColor:s.color}))},options:{maintainAspectRatio:false}})}
  // dist

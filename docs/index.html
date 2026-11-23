@@ -14,7 +14,7 @@
 <div class="tbl"><table id="setTbl"></table></div>
 <p class="small mut">* 深度 = 按已校验的元素规则模拟、每轮同时移走所有可走箭头所需的轮数，只衡量依赖结构，不等于体感难度。&quot;难度档&quot; 是包内配置里的 difficulty 字段（1–3），不含配置的关卡集（E）留空。</p>
 
-<h2>元素图例（图墙里的图形含义）</h2>
+<h2>元素图例（图墙里的图形含义，颜色只用于障碍元素）</h2>
 <div class="legend" id="legend"></div>
 <p class="small mut">方向编码：1=上(y+)，2=下(y−)，3=右(x+)，4=左(x−)。箭头头部是路径的最后一格，箭头沿头部方向直线飞出棋盘。</p>
 
@@ -40,7 +40,7 @@ loadStats().then(R=>{
  document.getElementById('setTbl').innerHTML=th+SETS.map(s=>{
   const r=R.filter(x=>x.set===s.k);const d=[1,2,3].map(v=>r.filter(x=>x.cfg_difficulty===v).length);
   return `<tr><td><span class="dot" style="background:${s.color}"></span>${s.name}</td><td>${s.from}–${s.to}</td><td class="n">${r.length}</td><td class="n">${f1(mean(r.map(x=>x.arrows)))}</td><td class="n">${f1(mean(r.map(x=>x.area)))}</td><td class="n">${pct(mean(r.map(x=>x.density)))}</td><td class="n">${f1(mean(r.map(x=>x.depth)))}</td><td class="n">${r.filter(x=>x.special_kinds>0).length}</td><td>${s.k==='oct'?'—':d.join(' / ')}</td></tr>`}).join('');
- document.getElementById('legend').innerHTML=[['arrow','箭头 Arrow（kind 1）','蛇形路径，头部带三角，点击后沿头部方向飞出。占全部元素的 96%。']].concat(ELEMS.map(e=>[e.k,`${e.name}（kind ${e.kind}）`,e.desc])).map(a=>`<div class="it"><img src="assets/legend_${a[0]}.png"><div><b>${a[1]}</b><div>${a[2]}</div></div></div>`).join('');
+ document.getElementById('legend').innerHTML=[['arrow','箭头 Arrow（kind 1）','蛇形路径，头部带三角，点击后沿头部方向飞出。图墙里所有箭头统一画成黑色，彩色只用于障碍元素。']].concat(ELEMS.map(e=>[e.k,`${e.name}（kind ${e.kind}）`,e.desc])).map(a=>`<div class="it"><img src="assets/legend_${a[0]}.png"><div><b>${a[1]}</b><div>${a[2]}</div></div></div>`).join('');
  document.getElementById('introTbl').innerHTML='<tr><th>元素</th><th class="n">首次出现（主线编号）</th><th>所属集合</th><th class="n">包含该元素的关数</th><th class="n">占比</th></tr>'+ELEMS.map(e=>{
   const r=R.filter(x=>x[e.k]>0);const f=r[0];return `<tr><td>${e.name}</td><td class="n">${f?f.global_id:'—'}</td><td>${f?SETMAP[f.set].short+' 第 '+f.set_index+' 关':'—'}</td><td class="n">${r.length}</td><td class="n">${pct(r.length/n)}</td></tr>`}).join('');
  // findings
@@ -54,7 +54,7 @@ loadStats().then(R=>{
   `集合 A 的平均棋盘 ${f1(mean(A.map(x=>x.area)))} 格、平均 ${f1(mean(A.map(x=>x.arrows)))} 条箭头；集合 C 平均 ${f1(mean(R.filter(x=>x.set==='loop200').map(x=>x.arrows)))} 条箭头，明显更大；集合 E（活动关）平均 ${f1(mean(R.filter(x=>x.set==='oct').map(x=>x.area)))} 格，常见动物剪影形状。`,
   `最多箭头的关卡是主线 #${maxA.global_id}（${maxA.levelId}），${maxA.arrows} 条；格数最大的是 #${bigS.global_id}，${bigS.width}×${bigS.height}。`,
   `依赖深度最大的关卡为 #${maxD.global_id}，需要 ${maxD.depth} 轮才能清空。`,
-  `求解校验：按元素真实规则模拟，${n} 关中 ${R.filter(x=>x.solved2).length} 关可完全清空，未能解开的是 ${R.filter(x=>!x.solved2).map(x=>'#'+x.global_id).join('、')}（原因待查，见方法页）。若只按「纯箭头」规则，含特殊元素的关卡有 57 关会死锁，说明特殊元素规则的建模是必要的。`];
+  `求解校验：按元素真实规则模拟，${n} 关中 ${R.filter(x=>x.solved2).length} 关可完全清空。`];
  document.getElementById('findings').innerHTML=L.map(t=>`<li>${t}</li>`).join('');
 });
 </script></body></html>
