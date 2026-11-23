@@ -11,30 +11,40 @@
 </ol>
 <h2>主线编号的拼接</h2>
 <p>1–300：<code>21.10_Levels_1-300_fix</code>；301–500：<code>2205-arrows-main</code>；501–700：<code>07.11_Loop_Fixes</code>；701–730：<code>2904-arrows-loop_v2</code>；731–760：<code>October_2026</code>。这个顺序是约定，不代表游戏内的真实顺序，也不代表上线时间顺序。</p>
-<h2>元素含义（推断）</h2>
+<h2>元素含义与校验</h2>
+<p>最初的元素名称是我从包内类名和数据结构推断的。随后拿到一份机制统计表（<code>mazeout 关卡机制.xlsx</code>，含游戏内教程截图和各机制的解锁关卡），逐项交叉校验，并据此重写了求解器。</p>
 <div class="tbl"><table>
-<tr><th>kind</th><th>名称</th><th>依据</th><th>置信度</th></tr>
-<tr><td>1</td><td>箭头 Arrow</td><td>有 direction，路径末格为头部（末两格的位移与 direction 完全吻合，6 万条无例外）</td><td>高</td></tr>
-<tr><td>2</td><td>箱子 Box</td><td>矩形多格、带 health，层级与箭头同级</td><td>中</td></tr>
-<tr><td>3</td><td>管道 Pipe</td><td>路径形、带 health 和 passes（通过点）</td><td>中</td></tr>
-<tr><td>4</td><td>拐角 Corner</td><td>单格、带 direction1/direction2 和 demand</td><td>中</td></tr>
-<tr><td>8</td><td>束带 Band</td><td>全部落在箭头占用格上，且横跨 2–5 条不同箭头</td><td>中</td></tr>
-<tr><td>11</td><td>钥匙 Key</td><td>全部落在单条箭头的一个格子上；137 个含锁定幕布的关卡里，128 关的钥匙数与锁定幕布 health 总和完全相等</td><td>较高</td></tr>
-<tr><td>12</td><td>幕布 Curtain</td><td>layer 1、带嵌套 items；嵌套箭头与顶层箭头在同一批格子上重叠，故按「垫在下层」绘制</td><td>中</td></tr>
-<tr><td>18</td><td>锁定幕布 Locked</td><td>layer 8、带 health 与 order；health 总和与同关 kind 11 数量在 128/137 关里完全相等</td><td>较高</td></tr>
+<tr><th>游戏内名称（教程弹窗）</th><th>数据 kind</th><th>表中解锁关卡</th><th>本数据首次出现（主线编号）</th><th>结论</th></tr>
+<tr><td>Linked Arrows 连接箭头</td><td>8</td><td>7</td><td>7</td><td>一致。教程：Linked arrows move together</td></tr>
+<tr><td>Curtain 幕布 + Key 钥匙</td><td>18 + 11</td><td>20</td><td>20</td><td>一致。教程：Collect required key to open the CURTAIN</td></tr>
+<tr><td>Pipe 水管</td><td>3</td><td>35</td><td>35</td><td>一致。教程：Pass arrows through the PIPE to break it</td></tr>
+<tr><td>Box 盒子</td><td>2</td><td>50</td><td>50</td><td>一致。教程：Clear required amount of arrows to break the BOX</td></tr>
+<tr><td>Corner 拐角器</td><td>4</td><td>75</td><td>70</td><td><b>差 5 关</b>。表里的教程截图布局与本数据的 #70 完全相同，是同一关；怀疑教程弹窗在该关之后才触发或游戏内编号有偏移，未能证实</td></tr>
+<tr><td>Elevator 电梯</td><td>12</td><td>100</td><td>100</td><td>一致。教程：Clear all arrows on the ELEVATOR to activate it</td></tr>
 </table></div>
-<p class="small mut">名称来自包内元数据里的物品类名（Pipe、Corner、Band、CurtainKey、LockedCurtain、Curtain、Box 等），但枚举数值和类名之间没有直接对照表，所以上表是按数据结构配对推断的，不是官方定义。「束带 / 管道 / 拐角」的真实玩法尚未经游戏内验证。</p>
+<p class="small mut">我之前把 kind 12 叫「幕布」、kind 18 叫「锁定幕布」，现已更正：kind 12 是<b>电梯 Elevator</b>，kind 18 才是游戏里的<b>幕布 Curtain</b>（带锁）。表中的截图来自第三方公众号文章，带水印，没有放进本站。</p>
+<h3>由截图确认的规则</h3>
+<ul>
+<li><b>连接箭头</b>：一组箭头一起移动，只要有一条被挡，整组都走不了。</li>
+<li><b>钥匙与幕布</b>：钥匙附在箭头上，该箭头离场时收集；幕布需要 health 把钥匙。</li>
+<li><b>水管</b>：箭头从一端进入，从另一端沿固定方向飞出；穿过 health 次后水管破碎。</li>
+<li><b>盒子</b>：清掉 health 条箭头后破碎，移除遮挡。</li>
+<li><b>拐角器</b>：箭头朝 <code>-direction1</code> 飞来时转向 <code>direction2</code>，反向同理（第 70 关数据与截图的箭头、拐角位置吻合）。</li>
+<li><b>电梯</b>：先清空电梯上的箭头，露出下层的嵌套箭头。</li>
+</ul>
+<p class="small mut">表里和截图没说清、本站也未能确认的：拐角的 <code>demand</code> 数字、盒子和幕布的 <code>order</code> 字段含义。求解器目前忽略 demand 和 order 的约束。</p>
 <h2>求解器与「依赖深度」</h2>
 <ul>
-<li>规则：箭头点击后沿头部方向直线飞出棋盘；射线上如果还有其他未移除箭头的格子，就被挡住。</li>
-<li>每条箭头的「阻挡集合」= 射线经过的其他箭头。按轮次反复移除没有阻挡的箭头，轮数就是<b>依赖深度</b>（依赖链最长的一条）。</li>
-<li>幕布内的嵌套箭头按第二阶段计算（<code>nested_depth</code>），主文档里的深度只含顶层箭头。</li>
-<li>校验：375 个纯箭头关全部可以完全清空，说明基础规则的推断是对的。</li>
-<li>局限：含箱子、管道、拐角、束带等特殊元素的关卡，其真实规则本求解器没有建模。其中有 57 关在仅箭头规则下卡死，它们的深度只是下限，图表里用空心点标出。</li>
-<li>深度只衡量依赖结构，不等于玩家体感难度（没有考虑视觉遮挡、误触惩罚、倒计时、道具等）。</li>
+<li>基础规则：箭头点击后沿头部方向直线飞出棋盘，射线上有其他未移除的箭头就被挡住。</li>
+<li>在此之上叠加上面六种元素的规则：连接箭头成组移动；水管作为传送通道并计数；盒子按累计清除数破碎；拐角器转向；幕布按钥匙数打开；电梯清空后加入下层箭头。</li>
+<li><b>依赖深度</b> = 每轮同时移走所有当前可走的箭头，直到清空所需的轮数。</li>
+<li><b>校验结果</b>：375 个纯箭头关全部可解；385 个含特殊元素的关卡中，<b>384 关</b>可完全清空。只按纯箭头规则时这 385 关里有 57 关死锁，加入元素规则后降到 1 关，说明规则建模基本正确。</li>
+<li>仍未解开的是 <b>#511</b>（C 集合第 11 关，含 5 条水管和 1 个电梯，共 180 条箭头），原因待查，其深度只是下限。</li>
+<li>用「能解开多少关」比较了几种不确定的规则变体：拐角侧面是否阻挡（不阻挡 384，阻挡 383）；被幕布盖住的箭头是否需要先开幕布才能点（不需要 384，需要只有 375）。后一条与直觉不太符，可能是我对钥匙与幕布 <code>order</code> 的建模不准，请当作低置信结论。</li>
+<li>深度只衡量依赖结构，不等于体感难度（没有考虑误触惩罚、倒计时、道具等）。</li>
 </ul>
 <h2>自绘截图说明</h2>
-<p>图片按每关 JSON 绘制：y 轴向上（与 Unity 一致），箭头头部为路径末格；颜色按 <code>colorId</code> 映射到一套示意色板，不是游戏里的实际配色。幕布在图里以淡紫色区域加较细的紫色箭头表示，锁定幕布以淡红色区域加数字徽标表示。</p>
+<p>图片按每关 JSON 绘制：y 轴向上（与 Unity 一致），箭头头部为路径末格；颜色按 <code>colorId</code> 映射到一套示意色板，不是游戏里的实际配色。电梯（kind 12）在图里以淡紫色区域加较细的紫色箭头表示（下层嵌套箭头），幕布（kind 18）以淡红色区域加数字徽标表示。</p>
 <h2>文件</h2>
 <ul><li><a href="data/stats.csv">stats.csv</a>：每关的结构、元素和求解指标。</li><li><a href="data/levels.json">levels.json</a>：解析后的 760 关原始数据（含拼接后的 global_id）。</li></ul>
 <footer>本站仅用于游戏关卡设计研究。游戏与关卡数据版权归 Grand Games 所有。</footer>

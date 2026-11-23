@@ -49,7 +49,7 @@ function open(g){
  const rows=[['棋盘（宽×高）',`${r.width}×${r.height}（${r.area} 格）`],['顶层箭头 / 占用格',`${r.arrows} / ${r.arrow_cells}（占用率 ${pct(r.density)}）`],
   ['箭头长度 均/最长/最短',`${r.len_mean} / ${r.len_max} / ${r.len_min}`],['平均转弯数',r.turns_mean],
   ['方向 上/下/右/左',`${r.dir_up} / ${r.dir_down} / ${r.dir_right} / ${r.dir_left}`],['颜色数',r.colors],
-  ['依赖深度（仅箭头规则）',r.depth+(r.total_stuck?`（有 ${r.total_stuck} 条无法清空，仅作下限）`:'')],['首轮可直接走的箭头',`${r.free0}（${pct(r.free0_ratio)}）`],
+  ['依赖深度（按元素规则模拟）',r.depth+(r.solved2?'':`（有 ${r.left2} 条未能清空，仅作下限）`)+(r.special_kinds?`；仅按纯箭头规则为 ${r.depth_basic}`:'')],['首轮可直接走的箭头',`${r.free0}（${pct(r.free0_ratio)}）`],
   ['每条箭头平均/最大阻挡数',`${r.dep_mean} / ${r.dep_max}`],
   ['难度档 / 配置时限',r.cfg_difficulty==null?'—':`${r.cfg_difficulty} / ${r.cfg_duration?r.cfg_duration+' 秒':'无'}`]];
  ELEMS.forEach(e=>{if(r[e.k]>0)rows.push([e.name,r[e.k]+(e.k==='box'?`（总血量 ${r.box_hp}）`:e.k==='pipe'?`（总血量 ${r.pipe_hp}）`:e.k==='locked'?`（需钥匙 ${r.locked_hp}）`:e.k==='curtain'?`（${r.curtain_cells} 格，嵌套箭头 ${r.nested_arrows}，嵌套深度 ${r.nested_depth}）`:'')])});

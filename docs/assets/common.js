@@ -6,13 +6,13 @@ const SETS=[
  {k:'oct',name:'E October_2026',short:'E',from:731,to:760,color:'#ef4444'}];
 const SETMAP=Object.fromEntries(SETS.map(s=>[s.k,s]));
 const ELEMS=[
- {k:'box',name:'箱子 Box',kind:2,desc:'占据矩形区域的障碍，带血量(health)'},
- {k:'pipe',name:'管道 Pipe',kind:3,desc:'带血量的管道路径，含通过点(passes)'},
- {k:'corner',name:'拐角 Corner',kind:4,desc:'单格转向块，带两个方向和 demand 数字'},
- {k:'band',name:'束带 Band',kind:8,desc:'覆盖在 2~5 条箭头上的束带，把它们绑在一起'},
- {k:'key',name:'钥匙 Key',kind:11,desc:'附着在某条箭头一个格子上，箭头离场后收集'},
- {k:'curtain',name:'幕布 Curtain',kind:12,desc:'垫在箭头下方的隐藏层，内含嵌套箭头'},
- {k:'locked',name:'锁定幕布 Locked',kind:18,desc:'覆盖大块区域，health=所需钥匙数'}];
+ {k:'band',name:'连接箭头 Linked Arrows',kind:8,desc:'束带把 2–5 条箭头绑在一起，必须一起移动，只要有一条被挡就都走不了（游戏第 7 关引入，教程：Linked arrows move together）'},
+ {k:'key',name:'钥匙 Key',kind:11,desc:'附着在某条箭头的一个格子上，该箭头离场时收集，用来打开幕布'},
+ {k:'locked',name:'幕布 Curtain',kind:18,desc:'带锁的大幕布，盖住一片区域，收集足够数量的钥匙（health）后打开（第 20 关引入）'},
+ {k:'pipe',name:'水管 Pipe',kind:3,desc:'箭头从一端穿入、从另一端按固定方向飞出，穿过 health 次后水管破碎（第 35 关引入）'},
+ {k:'box',name:'盒子 Box',kind:2,desc:'占据矩形区域的障碍，数字是需要清除的箭头数量，达到后破碎、移除遮挡（第 50 关引入）'},
+ {k:'corner',name:'拐角器 Corner',kind:4,desc:'单格转向块，箭头撞上后转向，考验路径预判（数据里首现第 70 关；见方法页对 75 的说明）'},
+ {k:'curtain',name:'电梯 Elevator',kind:12,desc:'分层遮挡：先清掉电梯上的箭头，才会露出下层的嵌套箭头（第 100 关引入）'}];
 async function loadStats(){const r=await fetch('data/stats.json');return r.json()}
 function nav(cur){
  const p=[['index.html','总览'],['levels.html','关卡图墙'],['stats.html','数据统计'],['method.html','方法与说明']];

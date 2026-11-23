@@ -2,7 +2,7 @@
 <title>数据统计 - Maze Out! 关卡解析</title><link rel="stylesheet" href="assets/style.css"></head><body>
 <main>
 <h1>数据统计</h1>
-<p class="mut small">横轴为人为拼接的主线编号 1–760，虚线分隔 5 个集合（A 1–300 · B 301–500 · C 501–700 · D 701–730 · E 731–760）。「依赖深度」只按普通箭头规则计算，含特殊元素且出现死锁的关卡用空心点标出，数值仅作下限。</p>
+<p class="mut small">横轴为人为拼接的主线编号 1–760，虚线分隔 5 个集合（A 1–300 · B 301–500 · C 501–700 · D 701–730 · E 731–760）。「依赖深度」按已校验的元素规则模拟（连接箭头、钥匙/幕布、水管、盒子、拐角器、电梯）；未能解开的关卡用空心点标出，数值仅作下限。</p>
 <h2>1. 规模趋势</h2>
 <div class="grid g2" id="trend"></div>
 <h2>2. 难度相关</h2>
@@ -12,7 +12,7 @@
 <h2>4. 分布</h2>
 <div class="grid g2" id="dist"></div>
 <h2>5. 极值榜</h2>
-<div class="grid g2"><div><h3>依赖深度 Top 10（仅箭头规则、可完全清空）</h3><div class="tbl"><table id="tDepth"></table></div></div><div><h3>箭头数 Top 10</h3><div class="tbl"><table id="tArrows"></table></div></div>
+<div class="grid g2"><div><h3>依赖深度 Top 10（可完全清空）</h3><div class="tbl"><table id="tDepth"></table></div></div><div><h3>箭头数 Top 10</h3><div class="tbl"><table id="tArrows"></table></div></div>
 <div><h3>棋盘格数 Top 10</h3><div class="tbl"><table id="tArea"></table></div></div><div><h3>占用率 Top 10</h3><div class="tbl"><table id="tDens"></table></div></div></div>
 <h2>6. 每 50 关分段均值</h2>
 <div class="tbl"><table id="tBucket"></table></div>
@@ -30,7 +30,7 @@ function scatter(parent,title,desc,key,opt={}){
  const cv=box(parent,title,desc);
  const ds=[];SETS.forEach(s=>{const r=R.filter(x=>x.set===s.k);
   ds.push({label:s.short+' '+s.k,data:r.filter(x=>!x.total_stuck||!opt.stuck).map(x=>({x:x.global_id,y:x[key]})),backgroundColor:s.color,pointRadius:2.4});
-  if(opt.stuck)ds.push({label:s.short+' 死锁(下限)',data:r.filter(x=>x.total_stuck).map(x=>({x:x.global_id,y:x[key]})),backgroundColor:'transparent',borderColor:s.color,pointRadius:3,pointStyle:'circle',borderWidth:1.2})});
+  if(opt.stuck)ds.push({label:s.short+' 未解开(下限)',data:r.filter(x=>x.total_stuck).map(x=>({x:x.global_id,y:x[key]})),backgroundColor:'transparent',borderColor:s.color,pointRadius:3,pointStyle:'circle',borderWidth:1.2})});
  new Chart(cv,{type:'scatter',data:{datasets:ds},options:{maintainAspectRatio:false,plugins:{bounds:true,legend:{display:false},tooltip:{callbacks:{label:c=>`#${c.raw.x}: ${c.raw.y}`}}},scales:{x:{min:0,max:761,title:{display:true,text:'主线编号'}},y:{beginAtZero:true,...(opt.yscale||{})}}}});
 }
 function bar(parent,title,desc,labels,datasets,opt={}){
@@ -45,7 +45,7 @@ loadStats().then(d=>{R=d;
  scatter('trend','顶层箭头数','每关普通箭头条数','arrows');
  scatter('trend','箭头占用率','箭头占用格数 / 棋盘格数','density',{yscale:{max:1}});
  scatter('trend','平均箭头长度','每条箭头占用的格数均值','len_mean');
- scatter('diff','依赖深度（仅箭头规则）','最少清空轮数；空心点=含特殊元素且死锁，仅为下限','depth',{stuck:true});
+ scatter('diff','依赖深度（按元素规则）','每轮同时移走所有可走箭头所需轮数；空心点=未能解开，仅为下限','depth',{stuck:true});
  scatter('diff','首轮可直接走的箭头比例','越低越需要先解开外围','free0_ratio',{yscale:{max:1}});
  scatter('diff','平均转弯数','路径越曲折，视觉上越难读','turns_mean');
  // difficulty cfg
