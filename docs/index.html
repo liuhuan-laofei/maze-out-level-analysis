@@ -14,6 +14,11 @@
 <div class="tbl"><table id="setTbl"></table></div>
 <p class="small mut">* 深度 = 按已校验的元素规则模拟、每轮同时移走所有可走箭头所需的轮数，只衡量依赖结构，不等于体感难度。&quot;难度档&quot; 是包内配置里的 difficulty 字段（1–3），不含配置的关卡集（E）留空。</p>
 
+<div class="notice"><b>集合之间的关系（请注意重复计数）：</b><br>
+· <b>D（701–730）不是新关卡</b>：它的 30 关与 B 的第 167–200 关逐格完全相同（箭头布局和方向一致，已逐关比对），例如 #701 = #467、#704 = #471。统计里 D 会和 B 重复计算。<br>
+· <b>B 与 A 前 4 关相同，之后各自独立</b>：B 不是 A 删去障碍后的版本。<br>
+· 代码里有 <code>LevelsConfig</code>、<code>LevelsConfigAb</code>、<code>LoopLevelsConfig</code>、<code>LoopLevelsConfigAb</code> 四个配置。<b>Ab 配置组</b>对应 B、D（纯箭头、无倒计时），<b>主配置组</b>对应 A、C（含障碍、有倒计时）。<code>Ab</code> 的含义包内没有说明，可能是 A/B 实验的一组，也可能只是旧版标记，属于推测，详见<a href="method.html#sets">方法与说明</a>。</div>
+
 <h2>元素图例（图墙里的图形含义，颜色只用于障碍元素）</h2>
 <div class="legend" id="legend"></div>
 <p class="small mut">方向编码：1=上(y+)，2=下(y−)，3=右(x+)，4=左(x−)。箭头头部是路径的最后一格，箭头沿头部方向直线飞出棋盘。</p>
@@ -36,10 +41,11 @@ loadStats().then(R=>{
  document.getElementById('kN').textContent=n;
  const kp=[[n,'关卡总数'],[R.reduce((a,r)=>a+r.arrows,0).toLocaleString(),'顶层箭头总数'],[f1(mean(R.map(r=>r.area))),'平均棋盘格数（宽×高）'],[pure+' / '+(n-pure),'纯箭头关 / 含特殊元素关']];
  document.getElementById('kpis').innerHTML=kp.map(a=>`<div class="kpi"><b>${a[0]}</b><span>${a[1]}</span></div>`).join('');
- const th='<tr><th>集合</th><th>主线编号</th><th class="n">关数</th><th class="n">平均箭头</th><th class="n">平均格数</th><th class="n">平均占用率</th><th class="n">平均深度*</th><th class="n">含特殊元素</th><th>难度档 1/2/3</th></tr>';
+ const GRP={main300:'主配置组（含障碍）',loop200:'主配置组·循环（含障碍）',ab200:'Ab 配置组（纯箭头）',loopv2:'Ab 配置组·循环（纯箭头）',oct:'活动关（无配置，纯箭头）'};
+ const th='<tr><th>集合</th><th>配置组</th><th>主线编号</th><th class="n">关数</th><th class="n">平均箭头</th><th class="n">平均格数</th><th class="n">平均占用率</th><th class="n">平均深度*</th><th class="n">含特殊元素</th><th>难度档 1/2/3</th></tr>';
  document.getElementById('setTbl').innerHTML=th+SETS.map(s=>{
   const r=R.filter(x=>x.set===s.k);const d=[1,2,3].map(v=>r.filter(x=>x.cfg_difficulty===v).length);
-  return `<tr><td><span class="dot" style="background:${s.color}"></span>${s.name}</td><td>${s.from}–${s.to}</td><td class="n">${r.length}</td><td class="n">${f1(mean(r.map(x=>x.arrows)))}</td><td class="n">${f1(mean(r.map(x=>x.area)))}</td><td class="n">${pct(mean(r.map(x=>x.density)))}</td><td class="n">${f1(mean(r.map(x=>x.depth)))}</td><td class="n">${r.filter(x=>x.special_kinds>0).length}</td><td>${s.k==='oct'?'—':d.join(' / ')}</td></tr>`}).join('');
+  return `<tr><td><span class="dot" style="background:${s.color}"></span>${s.name}</td><td>${GRP[s.k]}</td><td>${s.from}–${s.to}</td><td class="n">${r.length}</td><td class="n">${f1(mean(r.map(x=>x.arrows)))}</td><td class="n">${f1(mean(r.map(x=>x.area)))}</td><td class="n">${pct(mean(r.map(x=>x.density)))}</td><td class="n">${f1(mean(r.map(x=>x.depth)))}</td><td class="n">${r.filter(x=>x.special_kinds>0).length}</td><td>${s.k==='oct'?'—':d.join(' / ')}</td></tr>`}).join('');
  document.getElementById('legend').innerHTML=[['arrow','箭头 Arrow（kind 1）','蛇形路径，头部带三角，点击后沿头部方向飞出。图墙里所有箭头统一画成黑色，彩色只用于障碍元素。']].concat(ELEMS.map(e=>[e.k,`${e.name}（kind ${e.kind}）`,e.desc])).map(a=>`<div class="it"><img src="assets/legend_${a[0]}.png"><div><b>${a[1]}</b><div>${a[2]}</div></div></div>`).join('');
  document.getElementById('introTbl').innerHTML='<tr><th>元素</th><th class="n">首次出现（主线编号）</th><th>所属集合</th><th class="n">包含该元素的关数</th><th class="n">占比</th></tr>'+ELEMS.map(e=>{
   const r=R.filter(x=>x[e.k]>0);const f=r[0];return `<tr><td>${e.name}</td><td class="n">${f?f.global_id:'—'}</td><td>${f?SETMAP[f.set].short+' 第 '+f.set_index+' 关':'—'}</td><td class="n">${r.length}</td><td class="n">${pct(r.length/n)}</td></tr>`}).join('');
