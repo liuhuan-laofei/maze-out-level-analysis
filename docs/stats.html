@@ -1,0 +1,83 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>数据统计 - Maze Out! 关卡解析</title><link rel="stylesheet" href="assets/style.css"></head><body>
+<main>
+<h1>数据统计</h1>
+<p class="mut small">横轴为人为拼接的主线编号 1–760，虚线分隔 5 个集合（A 1–300 · B 301–500 · C 501–700 · D 701–730 · E 731–760）。「依赖深度」只按普通箭头规则计算，含特殊元素且出现死锁的关卡用空心点标出，数值仅作下限。</p>
+<h2>1. 规模趋势</h2>
+<div class="grid g2" id="trend"></div>
+<h2>2. 难度相关</h2>
+<div class="grid g2" id="diff"></div>
+<h2>3. 特殊元素</h2>
+<div class="grid g2" id="spec"></div>
+<h2>4. 分布</h2>
+<div class="grid g2" id="dist"></div>
+<h2>5. 极值榜</h2>
+<div class="grid g2"><div><h3>依赖深度 Top 10（仅箭头规则、可完全清空）</h3><div class="tbl"><table id="tDepth"></table></div></div><div><h3>箭头数 Top 10</h3><div class="tbl"><table id="tArrows"></table></div></div>
+<div><h3>棋盘格数 Top 10</h3><div class="tbl"><table id="tArea"></table></div></div><div><h3>占用率 Top 10</h3><div class="tbl"><table id="tDens"></table></div></div></div>
+<h2>6. 每 50 关分段均值</h2>
+<div class="tbl"><table id="tBucket"></table></div>
+<footer>数据来源：安装包内置关卡，自绘分析。完整指标见 <a href="data/stats.csv">stats.csv</a>。</footer>
+</main>
+<script src="assets/chart.umd.min.js"></script><script src="assets/common.js"></script>
+<script>
+nav('stats.html');
+Chart.defaults.font.size=11;Chart.defaults.animation=false;
+const bounds={id:'bounds',afterDraw(c){if(!c.config.options.plugins.bounds)return;const x=c.scales.x,y=c.chartArea,ctx=c.ctx;ctx.save();ctx.strokeStyle='#bbb';ctx.setLineDash([4,4]);[300.5,500.5,700.5,730.5].forEach(v=>{const px=x.getPixelForValue(v);ctx.beginPath();ctx.moveTo(px,y.top);ctx.lineTo(px,y.bottom);ctx.stroke()});ctx.restore()}};
+Chart.register(bounds);
+function box(parent,title,desc){const d=document.createElement('div');d.className='chart';d.innerHTML=`<h3>${title}</h3><p>${desc||''}</p><div class="box"><canvas></canvas></div>`;document.getElementById(parent).appendChild(d);return d.querySelector('canvas')}
+let R;
+function scatter(parent,title,desc,key,opt={}){
+ const cv=box(parent,title,desc);
+ const ds=[];SETS.forEach(s=>{const r=R.filter(x=>x.set===s.k);
+  ds.push({label:s.short+' '+s.k,data:r.filter(x=>!x.total_stuck||!opt.stuck).map(x=>({x:x.global_id,y:x[key]})),backgroundColor:s.color,pointRadius:2.4});
+  if(opt.stuck)ds.push({label:s.short+' 死锁(下限)',data:r.filter(x=>x.total_stuck).map(x=>({x:x.global_id,y:x[key]})),backgroundColor:'transparent',borderColor:s.color,pointRadius:3,pointStyle:'circle',borderWidth:1.2})});
+ new Chart(cv,{type:'scatter',data:{datasets:ds},options:{maintainAspectRatio:false,plugins:{bounds:true,legend:{display:false},tooltip:{callbacks:{label:c=>`#${c.raw.x}: ${c.raw.y}`}}},scales:{x:{min:0,max:761,title:{display:true,text:'主线编号'}},y:{beginAtZero:true,...(opt.yscale||{})}}}});
+}
+function bar(parent,title,desc,labels,datasets,opt={}){
+ const cv=box(parent,title,desc);
+ new Chart(cv,{type:'bar',data:{labels,datasets},options:{maintainAspectRatio:false,plugins:{legend:{display:datasets.length>1}},scales:{x:{stacked:!!opt.stack},y:{stacked:!!opt.stack,beginAtZero:true,max:opt.max}}}});
+}
+function hist(vals,edges){const c=new Array(edges.length-1).fill(0);vals.forEach(v=>{for(let i=0;i<c.length;i++)if(v>=edges[i]&&v<edges[i+1]){c[i]++;break}});return c}
+function topTable(id,key,fmt,filt){const r=R.filter(filt||(()=>true)).sort((a,b)=>b[key]-a[key]||a.global_id-b.global_id).slice(0,10);
+ document.getElementById(id).innerHTML='<tr><th>主线#</th><th>来源</th><th>棋盘</th><th class="n">'+fmt+'</th></tr>'+r.map(x=>`<tr><td><a href="levels.html#${x.global_id}">#${x.global_id}</a></td><td>${SETMAP[x.set].short}-${x.set_index}</td><td>${x.width}×${x.height}</td><td class="n">${key==='density'?pct(x[key]):x[key]}</td></tr>`).join('')}
+loadStats().then(d=>{R=d;
+ scatter('trend','棋盘格数','宽×高，反映版面大小','area');
+ scatter('trend','顶层箭头数','每关普通箭头条数','arrows');
+ scatter('trend','箭头占用率','箭头占用格数 / 棋盘格数','density',{yscale:{max:1}});
+ scatter('trend','平均箭头长度','每条箭头占用的格数均值','len_mean');
+ scatter('diff','依赖深度（仅箭头规则）','最少清空轮数；空心点=含特殊元素且死锁，仅为下限','depth',{stuck:true});
+ scatter('diff','首轮可直接走的箭头比例','越低越需要先解开外围','free0_ratio',{yscale:{max:1}});
+ scatter('diff','平均转弯数','路径越曲折，视觉上越难读','turns_mean');
+ // difficulty cfg
+ const labs=SETS.filter(s=>s.k!=='oct').map(s=>s.short);
+ bar('diff','配置的难度档分布（difficulty 1–3）','包内配置字段，E 集合无配置',labs,[1,2,3].map((v,i)=>({label:'难度 '+v,data:SETS.filter(s=>s.k!=='oct').map(s=>R.filter(x=>x.set===s.k&&x.cfg_difficulty===v).length),backgroundColor:['#86efac','#fcd34d','#f87171'][i]})),{stack:true});
+ const sc=document.getElementById('diff');
+ // depth vs arrows scatter
+ {const cv=box('diff','依赖深度 vs 箭头数','颜色同上；看深度是否只是箭头数的函数');new Chart(cv,{type:'scatter',data:{datasets:SETS.map(s=>({label:s.short,data:R.filter(x=>x.set===s.k&&!x.total_stuck).map(x=>({x:x.arrows,y:x.depth})),backgroundColor:s.color,pointRadius:2.4}))},options:{maintainAspectRatio:false,scales:{x:{title:{display:true,text:'箭头数'}},y:{title:{display:true,text:'深度'}}}}})}
+ // specials
+ bar('spec','含各特殊元素的关数（按集合）','只有 A、C 两个集合使用特殊元素',ELEMS.map(e=>e.name.split(' ')[0]),SETS.map(s=>({label:s.short,data:ELEMS.map(e=>R.filter(x=>x.set===s.k&&x[e.k]>0).length),backgroundColor:s.color})),{stack:true});
+ const bk=[];for(let i=0;i<760;i+=50)bk.push([i+1,Math.min(i+50,760)]);
+ {const cv=box('spec','特殊元素种类数（每 50 关均值）','关卡里同时出现的特殊元素种类');new Chart(cv,{type:'line',data:{labels:bk.map(b=>b[0]+'–'+b[1]),datasets:[{label:'平均特殊元素种类',data:bk.map(b=>mean(R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]).map(x=>x.special_kinds))),borderColor:'#2563eb',tension:.25}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}})}
+ bar('spec','含特殊元素关卡的比例（每 50 关）','',bk.map(b=>b[0]+'–'+b[1]),[{label:'含特殊元素比例',data:bk.map(b=>{const r=R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]);return Math.round(r.filter(x=>x.special_kinds>0).length/r.length*1000)/10}),backgroundColor:'#60a5fa'}],{max:100});
+ {const cv=box('spec','A 集合各元素出现关卡（前 300 关，每 25 关）','看机制引入顺序和密度');const bs=[];for(let i=0;i<300;i+=25)bs.push([i+1,i+25]);
+  new Chart(cv,{type:'bar',data:{labels:bs.map(b=>b[0]+'–'+b[1]),datasets:ELEMS.map((e,i)=>({label:e.name.split(' ')[0],data:bs.map(b=>R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]&&x[e.k]>0).length),backgroundColor:['#b07c48','#78909c','#ab47bc','#00c853','#ffd600','#7c4dff','#d32f2f'][i]}))},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:25}}}})}
+ {const cv=box('spec','特殊元素总数量（按集合）','每套集合里各元素的实例数（含箱子、管道等）');
+  new Chart(cv,{type:'bar',data:{labels:ELEMS.map(e=>e.name.split(' ')[0]),datasets:SETS.filter(s=>s.k==='main300'||s.k==='loop200').map(s=>({label:s.short,data:ELEMS.map(e=>R.filter(x=>x.set===s.k).reduce((a,x)=>a+x[e.k],0)),backgroundColor:s.color}))},options:{maintainAspectRatio:false}})}
+ // dist
+ const eA=[0,10,20,30,40,60,80,100,150,200,300,500];
+ bar('dist','箭头数分布','关卡数',eA.slice(0,-1).map((v,i)=>v+'–'+(eA[i+1]-1)),[{label:'关卡数',data:hist(R.map(x=>x.arrows),eA),backgroundColor:'#60a5fa'}]);
+ const eD=[0,5,10,15,20,25,30,40,50,70,100,300];
+ bar('dist','依赖深度分布（可完全清空的关）','关卡数',eD.slice(0,-1).map((v,i)=>v+'–'+(eD[i+1]-1)),[{label:'关卡数',data:hist(R.filter(x=>!x.total_stuck).map(x=>x.depth),eD),backgroundColor:'#34d399'}]);
+ bar('dist','箭头方向占比（按集合）','上/下/右/左 的箭头数占比，%',SETS.map(s=>s.short),[['dir_up','上'],['dir_down','下'],['dir_right','右'],['dir_left','左']].map((a,i)=>({label:a[1],data:SETS.map(s=>{const r=R.filter(x=>x.set===s.k);const t=r.reduce((p,x)=>p+x.dir_up+x.dir_down+x.dir_right+x.dir_left,0);return Math.round(r.reduce((p,x)=>p+x[a[0]],0)/t*1000)/10}),backgroundColor:['#60a5fa','#f87171','#fbbf24','#34d399'][i]})),{stack:true,max:100});
+ const eS=[0,100,200,300,400,500,600,800,1000,1500,2000,5000];
+ bar('dist','棋盘格数分布','关卡数',eS.slice(0,-1).map((v,i)=>v+'–'+(eS[i+1]-1)),[{label:'关卡数',data:hist(R.map(x=>x.area),eS),backgroundColor:'#a78bfa'}]);
+ const asp={};R.forEach(x=>{const k=x.width+'×'+x.height;asp[k]=(asp[k]||0)+1});
+ const ak=Object.entries(asp).sort((a,b)=>b[1]-a[1]).slice(0,12);
+ bar('dist','最常见的棋盘尺寸 Top 12','宽×高 → 关卡数',ak.map(a=>a[0]),[{label:'关卡数',data:ak.map(a=>a[1]),backgroundColor:'#fb923c'}]);
+ const dd={};R.filter(x=>x.cfg_duration!=null).forEach(x=>{dd[x.cfg_duration]=(dd[x.cfg_duration]||0)+1});
+ const dk=Object.entries(dd).sort((a,b)=>a[0]-b[0]);
+ bar('dist','配置时限分布（秒，0=无限制）','来自 durationInSeconds',dk.map(a=>a[0]),[{label:'关卡数',data:dk.map(a=>a[1]),backgroundColor:'#f472b6'}]);
+ topTable('tDepth','depth','深度',x=>!x.total_stuck);topTable('tArrows','arrows','箭头数');topTable('tArea','area','格数');topTable('tDens','density','占用率');
+ document.getElementById('tBucket').innerHTML='<tr><th>主线编号</th><th class="n">箭头</th><th class="n">棋盘格</th><th class="n">占用率</th><th class="n">深度</th><th class="n">平均长度</th><th class="n">特殊元素种类</th><th class="n">含特殊元素</th></tr>'+bk.map(b=>{const r=R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]);return `<tr><td>${b[0]}–${b[1]}</td><td class="n">${f1(mean(r.map(x=>x.arrows)))}</td><td class="n">${f1(mean(r.map(x=>x.area)))}</td><td class="n">${pct(mean(r.map(x=>x.density)))}</td><td class="n">${f1(mean(r.map(x=>x.depth)))}</td><td class="n">${f2(mean(r.map(x=>x.len_mean)))}</td><td class="n">${f2(mean(r.map(x=>x.special_kinds)))}</td><td class="n">${r.filter(x=>x.special_kinds>0).length}/${r.length}</td></tr>`}).join('');
+});
+</script></body></html>

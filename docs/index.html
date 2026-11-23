@@ -1,0 +1,60 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maze Out! - Tap Puzzle 关卡解析（760 关）</title><link rel="stylesheet" href="assets/style.css"></head><body>
+<main>
+<h1>Maze Out! - Tap Puzzle 关卡设计解析</h1>
+<p class="mut">Grand Games（包名 <code>com.grandgames.arrowjam</code>，版本 APKPure 909）· 从安装包内置关卡数据解析 · 共 <b id="kN">760</b> 关</p>
+<div class="notice"><b>请先看这三点：</b><br>
+1. 包内只有 <b>760 关</b>（5 套各自从 1 开始编号的关卡集），不足 1000 关。线上还有按服务器配置下发的关卡，包里没有数据，本文档没有也不会凑数。<br>
+2. 1–760 的连续编号是<b>人为拼接</b>，顺序是 A→B→C→D→E，不是游戏内真实的游玩顺序。每关都保留了原始 <code>levelId</code>。<br>
+3. 所有图片都是<b>按关卡数据自绘</b>，不是游戏内截图，配色和图标也是示意。元素名称由类名和数据结构推断，细节见「方法与说明」。</div>
+
+<div class="grid g4" id="kpis"></div>
+
+<h2>关卡集合</h2>
+<div class="tbl"><table id="setTbl"></table></div>
+<p class="small mut">* 深度 = 仅按普通箭头规则求得的最少清空轮数（含特殊元素的关卡仅供参考）。&quot;难度档&quot; 是包内配置里的 difficulty 字段（1–3），不含配置的关卡集（E）留空。</p>
+
+<h2>元素图例（图墙里的图形含义）</h2>
+<div class="legend" id="legend"></div>
+<p class="small mut">方向编码：1=上(y+)，2=下(y−)，3=右(x+)，4=左(x−)。箭头头部是路径的最后一格，箭头沿头部方向直线飞出棋盘。</p>
+
+<h2>机制引入节奏</h2>
+<div class="tbl"><table id="introTbl"></table></div>
+
+<h2>主要发现</h2>
+<div class="card"><ul id="findings"></ul></div>
+
+<h2>浏览</h2>
+<p><a href="levels.html">→ 关卡图墙（760 张，可筛选，点击看大图与数据）</a><br><a href="stats.html">→ 数据统计与图表</a><br><a href="data/stats.csv">→ stats.csv（每关指标）</a> · <a href="data/levels.json">→ levels.json（解析后的原始关卡数据，约 12MB）</a></p>
+<footer>本站为游戏关卡设计研究，数据来源于公开发布的安装包，版权归 Grand Games 所有。</footer>
+</main>
+<script src="assets/common.js"></script>
+<script>
+nav('index.html');
+loadStats().then(R=>{
+ const n=R.length,pure=R.filter(r=>r.special_kinds===0).length;
+ document.getElementById('kN').textContent=n;
+ const kp=[[n,'关卡总数'],[R.reduce((a,r)=>a+r.arrows,0).toLocaleString(),'顶层箭头总数'],[f1(mean(R.map(r=>r.area))),'平均棋盘格数（宽×高）'],[pure+' / '+(n-pure),'纯箭头关 / 含特殊元素关']];
+ document.getElementById('kpis').innerHTML=kp.map(a=>`<div class="kpi"><b>${a[0]}</b><span>${a[1]}</span></div>`).join('');
+ const th='<tr><th>集合</th><th>主线编号</th><th class="n">关数</th><th class="n">平均箭头</th><th class="n">平均格数</th><th class="n">平均占用率</th><th class="n">平均深度*</th><th class="n">含特殊元素</th><th>难度档 1/2/3</th></tr>';
+ document.getElementById('setTbl').innerHTML=th+SETS.map(s=>{
+  const r=R.filter(x=>x.set===s.k);const d=[1,2,3].map(v=>r.filter(x=>x.cfg_difficulty===v).length);
+  return `<tr><td><span class="dot" style="background:${s.color}"></span>${s.name}</td><td>${s.from}–${s.to}</td><td class="n">${r.length}</td><td class="n">${f1(mean(r.map(x=>x.arrows)))}</td><td class="n">${f1(mean(r.map(x=>x.area)))}</td><td class="n">${pct(mean(r.map(x=>x.density)))}</td><td class="n">${f1(mean(r.map(x=>x.depth)))}</td><td class="n">${r.filter(x=>x.special_kinds>0).length}</td><td>${s.k==='oct'?'—':d.join(' / ')}</td></tr>`}).join('');
+ document.getElementById('legend').innerHTML=[['arrow','箭头 Arrow（kind 1）','蛇形路径，头部带三角，点击后沿头部方向飞出。占全部元素的 96%。']].concat(ELEMS.map(e=>[e.k,`${e.name}（kind ${e.kind}）`,e.desc])).map(a=>`<div class="it"><img src="assets/legend_${a[0]}.png"><div><b>${a[1]}</b><div>${a[2]}</div></div></div>`).join('');
+ document.getElementById('introTbl').innerHTML='<tr><th>元素</th><th class="n">首次出现（主线编号）</th><th>所属集合</th><th class="n">包含该元素的关数</th><th class="n">占比</th></tr>'+ELEMS.map(e=>{
+  const r=R.filter(x=>x[e.k]>0);const f=r[0];return `<tr><td>${e.name}</td><td class="n">${f?f.global_id:'—'}</td><td>${f?SETMAP[f.set].short+' 第 '+f.set_index+' 关':'—'}</td><td class="n">${r.length}</td><td class="n">${pct(r.length/n)}</td></tr>`}).join('');
+ // findings
+ const A=R.filter(x=>x.set==='main300');const first=ELEMS.map(e=>[e.name,(R.find(x=>x[e.k]>0)||{}).global_id]);
+ const maxA=R.reduce((a,b)=>b.arrows>a.arrows?b:a);const maxD=R.filter(x=>x.total_stuck===0).reduce((a,b)=>b.depth>a.depth?b:a);
+ const bigS=R.reduce((a,b)=>b.area>a.area?b:a);
+ const stuck=R.filter(x=>x.total_stuck>0).length;
+ const L=[
+  `数据覆盖 5 套关卡集共 ${n} 关；其中 ${pure} 关（${pct(pure/n)}）只有普通箭头，${n-pure} 关含至少一种特殊元素。`,
+  `集合 A（主线 300 关）从第 1 关起逐步引入机制：${first.filter(a=>a[1]).sort((a,b)=>a[1]-b[1]).map(a=>a[0].split(' ')[0]+'@'+a[1]).join('，')}。`,
+  `集合 A 的平均棋盘 ${f1(mean(A.map(x=>x.area)))} 格、平均 ${f1(mean(A.map(x=>x.arrows)))} 条箭头；集合 C 平均 ${f1(mean(R.filter(x=>x.set==='loop200').map(x=>x.arrows)))} 条箭头，明显更大；集合 E（活动关）平均 ${f1(mean(R.filter(x=>x.set==='oct').map(x=>x.area)))} 格，常见动物剪影形状。`,
+  `最多箭头的关卡是主线 #${maxA.global_id}（${maxA.levelId}），${maxA.arrows} 条；格数最大的是 #${bigS.global_id}，${bigS.width}×${bigS.height}。`,
+  `仅箭头规则下依赖深度最大的关卡为 #${maxD.global_id}，需要 ${maxD.depth} 轮才能清空（深度 = 依赖链最长的一条）。`,
+  `求解器校验：${pure} 个纯箭头关中有 ${R.filter(x=>x.special_kinds===0&&x.total_stuck>0).length} 个死锁（即全部可解）。另有 ${stuck} 个含特殊元素的关卡在「仅箭头规则」下无法完全清空，说明特殊元素改变了通行规则，这些关的深度只能看作下限。`];
+ document.getElementById('findings').innerHTML=L.map(t=>`<li>${t}</li>`).join('');
+});
+</script></body></html>

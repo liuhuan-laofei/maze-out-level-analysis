@@ -1,0 +1,64 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>关卡图墙 - Maze Out! 关卡解析</title><link rel="stylesheet" href="assets/style.css"></head><body>
+<main>
+<h1>关卡图墙</h1>
+<p class="mut small">图片为按关卡数据自绘的还原图（非游戏截图）。点击任意关卡查看大图和数据，键盘 ←/→ 切换，Esc 关闭。</p>
+<div class="bar">
+ <label>集合 <select id="fSet"><option value="">全部 1–760</option></select></label>
+ <label>排序 <select id="fSort"><option value="global_id">主线编号</option><option value="arrows">箭头数 ↓</option><option value="area">棋盘格数 ↓</option><option value="depth">依赖深度 ↓</option><option value="density">占用率 ↓</option><option value="special_kinds">特殊元素种类 ↓</option></select></label>
+ <label>跳到编号 <input type="number" id="fGo" min="1" max="760" style="width:80px"></label>
+ <span id="fElems"></span>
+ <span class="small mut" id="cnt"></span>
+</div>
+<div class="wall" id="wall"></div>
+<div class="pager" id="pager"></div>
+</main>
+<div class="modal" id="modal"><div class="mbox"><div class="l"><img id="mimg"></div><div class="r"><span class="x" id="mx">×</span><h3 id="mt"></h3><div class="mut small" id="ms"></div><div class="nav"><button id="mp">← 上一关</button><button id="mn">下一关 →</button></div><table id="mtbl"></table></div></div></div>
+<script src="assets/common.js"></script>
+<script>
+nav('levels.html');
+const PS=50;let R=[],V=[],page=1,cur=null;const sel=new Set();
+const $=id=>document.getElementById(id);
+$('fSet').innerHTML+=SETS.map(s=>`<option value="${s.k}">${s.name}（${s.from}–${s.to}）</option>`).join('');
+$('fElems').innerHTML=ELEMS.map(e=>`<label class="chk"><input type="checkbox" value="${e.k}">${e.name.split(' ')[0]}</label>`).join(' ');
+function apply(){
+ const s=$('fSet').value,so=$('fSort').value;
+ V=R.filter(r=>(!s||r.set===s)&&[...sel].every(k=>r[k]>0));
+ V.sort(so==='global_id'?(a,b)=>a.global_id-b.global_id:(a,b)=>b[so]-a[so]||a.global_id-b.global_id);
+ $('cnt').textContent=`共 ${V.length} 关`;draw();
+}
+function draw(){
+ const tp=Math.max(1,Math.ceil(V.length/PS));page=Math.min(page,tp);
+ const sl=V.slice((page-1)*PS,page*PS);
+ $('wall').innerHTML=sl.map(r=>{const s=SETMAP[r.set];
+  const tags=ELEMS.filter(e=>r[e.k]>0).map(e=>`<span class="tag">${e.name.split(' ')[0]}</span>`).join('');
+  return `<div class="cell" data-id="${r.global_id}"><div class="im"><img loading="lazy" src="thumb/${String(r.global_id).padStart(4,'0')}.webp"></div>
+  <div class="t"><b>#${r.global_id}</b><span class="m"><span class="dot" style="background:${s.color}"></span>${s.short}-${r.set_index}</span></div>
+  <div class="m">${r.width}×${r.height} · ${r.arrows} 箭头 · 深度 ${r.depth}</div><div>${tags}</div></div>`}).join('');
+ let h='';for(let i=1;i<=tp;i++)h+=`<button class="${i===page?'on':''}" data-p="${i}">${i}</button>`;$('pager').innerHTML=tp>1?h:'';
+}
+$('pager').onclick=e=>{const p=e.target.dataset.p;if(p){page=+p;draw();scrollTo(0,0)}};
+$('wall').onclick=e=>{const c=e.target.closest('.cell');if(c)open(+c.dataset.id)};
+$('fSet').onchange=()=>{page=1;apply()};$('fSort').onchange=()=>{page=1;apply()};
+$('fElems').onchange=e=>{e.target.checked?sel.add(e.target.value):sel.delete(e.target.value);page=1;apply()};
+$('fGo').onchange=e=>{const g=+e.target.value;if(g>=1&&g<=760){$('fSet').value='';sel.clear();document.querySelectorAll('#fElems input').forEach(i=>i.checked=false);$('fSort').value='global_id';apply();page=Math.ceil(g/PS);draw();open(g)}};
+function open(g){
+ cur=g;const r=R[g-1],s=SETMAP[r.set],id=String(g).padStart(4,'0');
+ $('mimg').src='img/'+id+'.webp';$('mt').textContent=`主线 #${g}`;
+ $('ms').innerHTML=`<span class="dot" style="background:${s.color}"></span>${s.name} · 第 ${r.set_index} 关<br><code>${r.levelId}</code>`;
+ const rows=[['棋盘（宽×高）',`${r.width}×${r.height}（${r.area} 格）`],['顶层箭头 / 占用格',`${r.arrows} / ${r.arrow_cells}（占用率 ${pct(r.density)}）`],
+  ['箭头长度 均/最长/最短',`${r.len_mean} / ${r.len_max} / ${r.len_min}`],['平均转弯数',r.turns_mean],
+  ['方向 上/下/右/左',`${r.dir_up} / ${r.dir_down} / ${r.dir_right} / ${r.dir_left}`],['颜色数',r.colors],
+  ['依赖深度（仅箭头规则）',r.depth+(r.total_stuck?`（有 ${r.total_stuck} 条无法清空，仅作下限）`:'')],['首轮可直接走的箭头',`${r.free0}（${pct(r.free0_ratio)}）`],
+  ['每条箭头平均/最大阻挡数',`${r.dep_mean} / ${r.dep_max}`],
+  ['难度档 / 配置时限',r.cfg_difficulty==null?'—':`${r.cfg_difficulty} / ${r.cfg_duration?r.cfg_duration+' 秒':'无'}`]];
+ ELEMS.forEach(e=>{if(r[e.k]>0)rows.push([e.name,r[e.k]+(e.k==='box'?`（总血量 ${r.box_hp}）`:e.k==='pipe'?`（总血量 ${r.pipe_hp}）`:e.k==='locked'?`（需钥匙 ${r.locked_hp}）`:e.k==='curtain'?`（${r.curtain_cells} 格，嵌套箭头 ${r.nested_arrows}，嵌套深度 ${r.nested_depth}）`:'')])});
+ $('mtbl').innerHTML=rows.map(a=>`<tr><th>${a[0]}</th><td>${a[1]}</td></tr>`).join('');
+ $('modal').classList.add('on');history.replaceState(null,'','#'+g);
+}
+function close_(){$('modal').classList.remove('on');history.replaceState(null,'',location.pathname)}
+$('mx').onclick=close_;$('modal').onclick=e=>{if(e.target.id==='modal')close_()};
+$('mp').onclick=()=>cur>1&&open(cur-1);$('mn').onclick=()=>cur<760&&open(cur+1);
+document.onkeydown=e=>{if(!$('modal').classList.contains('on'))return;if(e.key==='Escape')close_();if(e.key==='ArrowLeft'&&cur>1)open(cur-1);if(e.key==='ArrowRight'&&cur<760)open(cur+1)};
+loadStats().then(d=>{R=d;apply();const h=+location.hash.slice(1);if(h>=1&&h<=760){page=Math.ceil(h/PS);draw();open(h)}});
+</script></body></html>
