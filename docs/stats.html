@@ -16,11 +16,15 @@
 <div><h3>棋盘格数 Top 10</h3><div class="tbl"><table id="tArea"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 area = W × H 降序取前 10；同值按主线编号升序</div><dl><dt>W / H</dt><dd>棋盘宽 / 高（格）</dd></dl></div></details></div><div><h3>占用率 Top 10</h3><div class="tbl"><table id="tDens"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 density = arrow_cells ÷ (W × H) 降序取前 10；同值按主线编号升序</div><dl><dt>arrow_cells</dt><dd>顶层箭头占用的格子总数</dd><dt>W × H</dt><dd>棋盘总格数</dd></dl><div class="w">大量关卡的占用率都是 100%，并列时只按编号排，所以这张榜参考价值有限。</div></div></details></div></div>
 <h2>6. 每 50 关分段均值</h2>
 <div class="tbl"><table id="tBucket"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">每列 = 该 50 关内逐关指标的算术平均（最后一段 751–760 只有 10 关）</div><dl><dt>箭头</dt><dd>arrows 的平均</dd><dt>棋盘格</dt><dd>area = W × H 的平均</dd><dt>占用率</dt><dd>density = arrow_cells ÷ (W × H) 的平均（各关占用率再取均值，不按面积加权）</dd><dt>深度</dt><dd>depth 的平均（760 关全部可清空）</dd><dt>平均长度</dt><dd>len_mean 的平均，是“各关均值再取均值”，不按箭头数加权</dd><dt>特殊元素种类</dt><dd>special_kinds（0–7）的平均</dd><dt>含特殊元素</dt><dd>special_kinds > 0 的关数 / 该段关卡数</dd><dt>有倒计时关数</dt><dd>durationInSeconds > 0 的关数 / 该段里有配置的关数。分母不含没有配置的关（E 集合 October 没有 duration 配置，显示“无配置”）</dd><dt>平均时限（秒）</dt><dd>该段里 durationInSeconds > 0 的关的时限算术平均；0 表示无倒计时，不参与平均；全段无倒计时则显示 —</dd></dl></div></details>
-<h2>7. 障碍元素的尺寸与分布（盒子 / 水管 / 电梯）</h2>
-<p class="mut small">按“实例”统计，包含电梯下层嵌套的盒子和水管（盒子 2 个、水管 8 个）。尺寸用占用格数和外接矩形（宽×高）表示，位置用外接矩形中心占棋盘的比例表示。数据在 <a href="data/obstacles.json">obstacles.json</a>。</p>
+<h2>7. 障碍元素的尺寸、覆盖与消除条件（盒子 / 水管 / 电梯 / 幕布）</h2>
+<p class="mut small">按“实例”统计，包含电梯下层嵌套的盒子（2 个）和水管（8 个）。尺寸 = 外接矩形（宽×高，按数据里的方向，3×6 与 6×3 分开计）。三类信息：<b>① 每种尺寸的数量</b>；<b>② 下方覆盖的箭头数</b>（压在它下面、被它遮住的箭头）；<b>③ 消除条件的分布</b>（要满足什么才能打开 / 破碎）。逐实例数据见 <a href="data/obstacles.json">obstacles.json</a>。</p>
 <div class="tbl"><table id="obsTbl"></table></div>
-<details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">cells = 元素占用的格子数\n外接矩形 w×h = (max x − min x + 1) × (max y − min y + 1)\n占棋盘比例 share = cells ÷ (W × H)\n贴边 edge = 外接矩形碰到棋盘任一边界</div><dl><dt>实例</dt><dd>元素个数，同一关里多个按多个算</dd><dt>health</dt><dd>盒子：需要清除的箭头数；水管：能被穿过的次数。电梯没有 health</dd><dt>矩形占比</dt><dd>cells = w × h 的实例占比，100% 说明形状是实心矩形</dd><dt>中位 / 均值</dt><dd>对全部实例计算，不按关卡加权</dd></dl></div></details>
-<div class="grid g2" id="obs"></div>
+<details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">cells = 元素占用的格子数\n外接矩形 w×h = (max x − min x + 1) × (max y − min y + 1)\n占棋盘比例 share = cells ÷ (W × H)\n贴边 edge = 外接矩形碰到棋盘任一边界\n覆盖箭头数 below = #{ 箭头 : 至少有一格落在该元素的 cells 内 }\n消除条件 cond（见各元素小节）</div><dl><dt>实例</dt><dd>元素个数，同一关里多个按多个算</dd><dt>覆盖箭头数</dt><dd>盒子：顶层箭头；电梯：它下层嵌套的箭头；幕布：被它盖住的顶层箭头</dd><dt>消除条件</dt><dd>盒子：清除的箭头数达到 health；水管：被穿过 health 次；电梯：站在它上面的顶层箭头必须全部移走；幕布：累计钥匙数达到要求</dd><dt>中位 / 均值</dt><dd>对全部实例计算，不按关卡加权</dd></dl></div></details>
+<h3>7.1 盒子 Box</h3><div class="grid g2" id="obsBox"></div>
+<h3>7.2 水管 Pipe</h3><div class="grid g2" id="obsPipe"></div>
+<h3>7.3 电梯 Elevator</h3><div class="grid g2" id="obsElev"></div>
+<h3>7.4 幕布 Curtain</h3><div class="grid g2" id="obsCurt"></div>
+<h3>7.5 综合对比</h3><div class="grid g2" id="obsAll"></div>
 <footer>数据来源：安装包内置关卡，自绘分析。完整指标见 <a href="data/stats.csv">stats.csv</a>。</footer>
 </main>
 <script src="assets/chart.umd.min.js"></script><script src="assets/common.js"></script>
@@ -58,15 +62,28 @@ const HELP={
 };
 
 Object.assign(HELP,{
-'盒子 占用格数分布':F('柱高 = #{ 盒子 : lo ≤ cells < hi }')+DL([['cells','盒子占用的格子数，均为实心矩形'],['[lo, hi)','区间，左闭右开']])+'含义：盒子大小的分布，中位约 32 格；最常见的是 4×4、6×6、3×3、3×6。',
-'盒子 health 与占用格数':'每个点是一个盒子：'+DL([['横轴','cells：占用格数'],['纵轴','health：需清除的箭头数']])+W('两者没有对应关系（health = cells 的只有 5 个）。health 更像按全关箭头总数设定：352/353 个盒子的 health 不超过该关箭头数。'),
-'水管 路径长度分布':F('柱高 = #{ 水管 : lo ≤ cells < hi }')+DL([['cells','水管占用的格子数，即路径长度'],['[lo, hi)','区间，左闭右开']])+'含义：中位 19 格，最短 5 格，最长 105 格。',
-'水管 形状（转弯数）':F('turns = #{ j : 方向(j→j+1) ≠ 方向(j-1→j) }')+DL([['0-turn','直线'],['1-turn / 2-turn','L 形 / U 形（含 Z 形）'],['≥3','多次折弯']])+'含义：2 转弯的 U 形最多，直线只有 21 条。',
-'水管 health 分布':F('柱高 = #{ 水管 : health = v }')+DL([['health','水管可被箭头穿过的次数，穿满后破碎']])+'含义：中位 4 次，最大 14 次。',
-'电梯 占用格数分布':F('柱高 = #{ 电梯 : lo ≤ cells < hi }')+DL([['cells','电梯覆盖的格数，均为实心矩形']])+'含义：中位 144 格，最大 936 格；电梯体量明显大于盒子和水管。',
+'盒子 各尺寸数量':F('柱长 = #{ 盒子 : 外接矩形 = w×h }')+DL([['w×h','外接矩形宽×高（格），盒子都是实心矩形，所以 cells = w × h'],['顺序','按数量降序，同数量按面积升序']])+'含义：设计里常用的盒子规格。每一种出现过的尺寸都列出。',
+'盒子 下方覆盖的箭头数':F('below = #{ 顶层箭头 : 至少一格落在盒子 cells 内 }')+W('顶层箭头里没有任何一个被盒子覆盖（353 个盒子全部为 0），盒子只放在空位上，靠阻挡路径起作用。另有 14 个盒子叠在电梯区域上，压住电梯下层嵌套的箭头，见下方“压住下层嵌套箭头”那张图。'),
+'盒子 压住下层嵌套箭头数':F('below_nested = #{ 电梯下层箭头 : 至少一格落在盒子 cells 内 }（只统计顶层盒子）')+DL([['电梯下层箭头','电梯 items 里的嵌套箭头'],['取值 0','盒子没有压在任何电梯上']])+'含义：只有 14 个盒子（7 关）位于电梯区域内，所以绝大多数为 0。',
+'盒子 消除条件分布（health）':F('条件：已清除的箭头总数 ≥ health，盒子破碎')+DL([['health','需要清除的箭头数（全局累计，不限定是哪些箭头）'],['[lo, hi)','区间，左闭右开']])+'含义：约 61% 的盒子需要清除 20–59 条箭头；中位 33，最大 148。',
+'盒子 health 占全关箭头比例':F('ratio = health ÷ arrows')+DL([['arrows','该关顶层箭头总数'],['ratio','需要清除的箭头占全关比例']])+'含义：中位约 0.44；353 个盒子里 352 个 ratio ≤ 1，即清除量不会超过全关箭头数。',
+'水管 各尺寸数量':F('柱长 = #{ 水管 : 外接矩形 = w×h }')+DL([['w×h','水管路径的外接矩形（水管是折线，实际占用格数 cells 小于 w×h，只有直线的 w 或 h 为 1）']])+'含义：水管形状多样，尺寸最分散；每一种出现过的尺寸都列出。',
+'水管 路径长度分布（占用格数）':F('柱高 = #{ 水管 : lo ≤ cells < hi }')+DL([['cells','水管占用的格子数，即路径长度']])+'含义：中位 19 格，最短 5，最长 105。',
+'水管 消除条件分布（health）':F('条件：被箭头穿过的累计次数 ≥ health，水管破碎')+DL([['health','可被穿过的次数']])+'含义：集中在 3 和 4 次，最大 14。',
+'水管 形状（转弯数）':F('turns = #{ j : 方向(j→j+1) ≠ 方向(j-1→j) }')+DL([['0 转弯','直线'],['1 / 2 转弯','L 形 / U 形或 Z 形']])+'含义：2 转弯最多，直线只有 21 条。水管没有“覆盖箭头”的概念，箭头从一端进、另一端出。',
+'电梯 各尺寸数量':F('柱长 = #{ 电梯 : 外接矩形 = w×h }')+DL([['w×h','电梯外接矩形宽×高，均为实心矩形']])+'含义：电梯体量大，尺寸分散，同一尺寸出现 1–13 次；每一种出现过的尺寸都列出。',
+'电梯 下方覆盖的箭头数':F('below = #{ 电梯 items 里的嵌套箭头 }')+DL([['嵌套箭头','电梯打开后才露出来的下层箭头']])+'含义：中位 16 条，最少 3、最多 96。电梯下层还可能有钥匙、拐角、水管、连接箭头、盒子，数量很少（见综合表）。',
+'电梯 消除条件分布（上层待清箭头数）':F('条件：站在电梯格子上的顶层箭头全部移走 → 电梯打开\ncond = #{ 顶层箭头 : 至少一格落在电梯 cells 内 }')+DL([['cond','必须先移走的上层箭头数（与钥匙无关）'],['完全在内','209/247 电梯上方的箭头整条都在电梯内，其余有一部分伸出电梯']])+'含义：中位 16 条，最多 91 条；没有 cond=0 的电梯，即每个电梯上方都有箭头压着。',
 '电梯 占棋盘比例':F('share = cells ÷ (W × H)')+DL([['cells','电梯占用格数'],['W × H','棋盘总格数']])+'含义：中位约 15%；最大为 #507 的 100%（整盘都是电梯）。',
-'每关障碍实例数':F('柱高 = #{ 含该元素的关卡 : 该元素个数 = n }')+DL([['n','同一关里该元素的实例数']])+'含义：多数关卡每种元素 1–4 个，盒子最多一关 12 个。',
-'占棋盘比例中位数（按 50 关分段）':F('点值 = median{ share : 该段内的实例 }\nshare = cells ÷ (W × H)')+DL([['分段','A 集合按 1–50、51–100…；C 集合按 501–550…'],['median','中位数，减少个别巨型实例的影响']])+W('只画有该元素的分段；样本少的段（如 A 的 1–50 只有 1 个盒子）参考价值低。'),
+'电梯 上层待清箭头 vs 下层箭头':'每个点是一个电梯：'+DL([['横轴','cond：上层必须清掉的箭头数'],['纵轴','below：下层被保护的箭头数']])+'含义：看“打开电梯的代价”与“打开后的收益”是否匹配。',
+'幕布 各尺寸数量':F('柱长 = #{ 幕布 : 外接矩形 = w×h }')+DL([['w×h','幕布外接矩形宽×高，均为实心矩形']])+'含义：348 块里只有 64 块宽度等于棋盘宽（87 块贴满一个方向），多数是区域块；每一种出现过的尺寸都列出。',
+'幕布 下方覆盖的箭头数':F('below = #{ 顶层箭头 : 至少一格落在幕布 cells 内 }')+DL([['整条被盖','348 个幕布里 345 个盖住的箭头全部在幕布内，3 个有箭头伸出幕布']])+'含义：中位 13 条，最多 64；这些箭头在幕布解锁前不能点，也不能被越过。',
+'幕布 消除条件分布（累计钥匙数）':F('cum_keys = Σ health（order ≤ 本幕布的所有幕布）')+DL([['health','每个幕布本身都等于 1'],['order','幕布的解锁顺序，从 0 开始'],['cum_keys','解开本幕布时累计需要收集的钥匙数']])+W('数据里每块幕布 health 都是 1，一关的钥匙总数等于幕布数。“按 order 累计”是我的建模假设：第 k 块需要累计 k 把钥匙。如果游戏实际是“每块各要 1 把”，则条件分布全部为 1。'),
+'幕布 每关幕布数':F('n = 一关里的幕布个数 = 该关需要的钥匙总数')+DL([['n','同一关里的幕布个数']])+'含义：多数关卡 1–3 块，最多 8 块。',
+'幕布 下层覆盖箭头 vs 累计钥匙数':'每个点是一块幕布：'+DL([['横轴','cum_keys：累计钥匙数'],['纵轴','below：盖住的箭头数']]),
+'覆盖箭头数对比（盒子 / 电梯 / 幕布）':F('below 的中位数')+DL([['盒子','顶层箭头，全部为 0'],['电梯','下层嵌套箭头'],['幕布','被盖住的顶层箭头']]),
+'每关障碍实例数':F('柱高 = #{ 含该元素的关卡 : 该元素个数 = n }')+DL([['n','同一关里该元素的实例数']]),
+'占棋盘比例中位数（按 50 关分段）':F('点值 = median{ share : 该段内的实例 }\nshare = cells ÷ (W × H)')+DL([['分段','A 集合 1–50…；C 集合 501–550…']])+W('只画有该元素的分段；样本少的段（如 A 的 1–50 只有 1 个盒子）参考价值低。'),
 });
 function howHTML(t){return HELP[t]?`<details class="how"><summary>这张图怎么算</summary><div class="b">${HELP[t]}</div></details>`:''}
 function box(parent,title,desc){const d=document.createElement('div');d.className='chart';d.innerHTML=`<h3>${title}</h3><p>${desc||''}</p><div class="box"><canvas></canvas></div>${howHTML(title)}`;document.getElementById(parent).appendChild(d);return d.querySelector('canvas')}
@@ -128,27 +145,68 @@ loadStats().then(d=>{R=d;
 });
 
 fetch('data/obstacles.json').then(r=>r.json()).then(O=>{
- const K=[['box','盒子 Box'],['pipe','水管 Pipe'],['elevator','电梯 Elevator']];
+ const K=[['box','盒子 Box','#b07c48'],['pipe','水管 Pipe','#607d8b'],['elevator','电梯 Elevator','#7c4dff'],['curtain','幕布 Curtain','#c62828']];
  const by=k=>O.filter(r=>r.kind===k);
- const q=(a,p)=>{const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor(p*(s.length-1)+.5))]};
- const rowOf=(name,k)=>{const r=by(k),c=r.map(x=>x.cells),h=r.filter(x=>x.health!=null).map(x=>x.health);
-  return `<tr><td>${name}</td><td class="n">${r.length}</td><td class="n">${new Set(r.map(x=>x.gid)).size}</td><td class="n">${Math.min(...c)} / ${median(c)} / ${f1(mean(c))} / ${Math.max(...c)}</td><td class="n">${median(r.map(x=>x.w))}×${median(r.map(x=>x.h))}（最大 ${Math.max(...r.map(x=>x.w))}×${Math.max(...r.map(x=>x.h))}）</td><td class="n">${h.length?Math.min(...h)+' / '+median(h)+' / '+f1(mean(h))+' / '+Math.max(...h):'—'}</td><td class="n">${pct(median(r.map(x=>x.share)))}</td><td class="n">${pct(r.filter(x=>x.rect).length/r.length)}</td><td class="n">${pct(r.filter(x=>x.edge).length/r.length)}</td><td class="n">${r.filter(x=>x.under_elevator).length}</td></tr>`};
- document.getElementById('obsTbl').innerHTML='<tr><th>元素</th><th class="n">实例数</th><th class="n">关卡数</th><th class="n">占用格 最小/中位/均值/最大</th><th class="n">外接矩形 中位（最大）</th><th class="n">health 最小/中位/均值/最大</th><th class="n">占棋盘比例 中位</th><th class="n">矩形占比</th><th class="n">贴边占比</th><th class="n">位于电梯下层</th></tr>'+K.map(a=>rowOf(a[1],a[0])).join('');
- const mkEdges=(a)=>a.slice(0,-1).map((v,i)=>v+'–'+(a[i+1]-1));
- const eB=[0,10,16,25,36,50,70,100,150,300],eP=[0,10,15,20,25,30,40,60,120],eE=[0,50,100,150,200,300,500,1000];
- bar('obs','盒子 占用格数分布','盒子数（实例）',mkEdges(eB),[{label:'盒子数',data:hist(by('box').map(x=>x.cells),eB),backgroundColor:'#b07c48'}]);
- {const cv=box('obs','盒子 health 与占用格数','每个点是一个盒子');new Chart(cv,{type:'scatter',data:{datasets:[{label:'盒子',data:by('box').map(x=>({x:x.cells,y:x.health})),backgroundColor:'#b07c48',pointRadius:2.6}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'占用格数'}},y:{title:{display:true,text:'health（需清除箭头数）'},beginAtZero:true}}}})}
- bar('obs','水管 路径长度分布','水管数（实例）',mkEdges(eP),[{label:'水管数',data:hist(by('pipe').map(x=>x.cells),eP),backgroundColor:'#607d8b'}]);
- {const c=collections_count(by('pipe').map(x=>x.turns>=3?'≥3 转弯':x.turns+' 转弯'));const ks=['0 转弯','1 转弯','2 转弯','≥3 转弯'];bar('obs','水管 形状（转弯数）','水管数（实例）',ks,[{label:'水管数',data:ks.map(k=>c[k]||0),backgroundColor:'#78909c'}])}
- {const c=collections_count(by('pipe').map(x=>x.health));const ks=Object.keys(c).map(Number).sort((a,b)=>a-b);bar('obs','水管 health 分布','水管数（实例）',ks,[{label:'水管数',data:ks.map(k=>c[k]),backgroundColor:'#90a4ae'}])}
- bar('obs','电梯 占用格数分布','电梯数（实例）',mkEdges(eE),[{label:'电梯数',data:hist(by('elevator').map(x=>x.cells),eE),backgroundColor:'#7c4dff'}]);
- const eS=[0,0.05,0.1,0.15,0.2,0.3,0.5,1.01];
- bar('obs','电梯 占棋盘比例','电梯数（实例）',eS.slice(0,-1).map((v,i)=>Math.round(v*100)+'–'+Math.min(100,Math.round(eS[i+1]*100))+'%'),[{label:'电梯数',data:hist(by('elevator').map(x=>x.share),eS),backgroundColor:'#a78bfa'}]);
- {const cv=box('obs','每关障碍实例数','横轴是同一关里该元素的个数');const per=k=>{const c={};const g={};by(k).forEach(x=>g[x.gid]=(g[x.gid]||0)+1);Object.values(g).forEach(v=>c[v]=(c[v]||0)+1);return c};
+ const rng=(v)=>v.length?Math.min(...v)+' / '+median(v)+' / '+f1(mean(v))+' / '+Math.max(...v):'—';
+ document.getElementById('obsTbl').innerHTML='<tr><th>元素</th><th class="n">实例数</th><th class="n">关卡数</th><th class="n">不同尺寸数</th><th class="n">占用格 最小/中位/均值/最大</th><th class="n">覆盖箭头数 最小/中位/均值/最大</th><th>消除条件（取值 最小/中位/均值/最大）</th><th class="n">占棋盘比例 中位</th><th class="n">贴边占比</th></tr>'+K.map(a=>{
+  const r=by(a[0]);const cs=r.map(x=>x.cells);const bl=r.filter(x=>x.below!=null).map(x=>x.below);const cd=r.filter(x=>x.cond!=null).map(x=>x.cond);
+  const cname={box:'清除箭头数 health',pipe:'被穿过次数 health',elevator:'上层待清箭头数',curtain:'累计钥匙数'}[a[0]];
+  const cv=a[0]==='curtain'?r.map(x=>x.cum_keys):cd;
+  return `<tr><td>${a[1]}</td><td class="n">${r.length}</td><td class="n">${new Set(r.map(x=>x.gid)).size}</td><td class="n">${new Set(r.map(x=>x.w+'×'+x.h)).size}</td><td class="n">${rng(cs)}</td><td class="n">${a[0]==='pipe'?'不适用':rng(bl)}</td><td>${cname}：${rng(cv)}</td><td class="n">${pct(median(r.map(x=>x.share)))}</td><td class="n">${pct(r.filter(x=>x.edge).length/r.length)}</td></tr>`}).join('');
+ const mk=(a)=>a.slice(0,-1).map((v,i)=>(a[i+1]-1===v?v:v+'–'+(a[i+1]-1)));
+ // size count chart: every size, horizontal, sorted
+ function sizeChart(parent,kind,color){
+  const c={};by(kind).forEach(x=>{const k=x.w+'×'+x.h;c[k]=(c[k]||0)+1});
+  const ent=Object.entries(c).sort((a,b)=>b[1]-a[1]||(a[0].split('×')[0]*a[0].split('×')[1])-(b[0].split('×')[0]*b[0].split('×')[1]));
+  const d=document.createElement('div');d.className='chart';d.style.gridColumn='1 / -1';
+  const name=K.find(k=>k[0]===kind)[1].split(' ')[0];
+  d.innerHTML=`<h3>${name} 各尺寸数量</h3><p>横轴为数量，纵轴为 宽×高；共 ${ent.length} 种尺寸，每一种都列出（${by(kind).length} 个实例）</p><div class="box" style="height:${Math.max(220,ent.length*17+60)}px"><canvas></canvas></div>${howHTML(name+' 各尺寸数量')}`;
+  document.getElementById(parent).appendChild(d);
+  new Chart(d.querySelector('canvas'),{type:'bar',data:{labels:ent.map(e=>e[0]),datasets:[{label:'数量',data:ent.map(e=>e[1]),backgroundColor:color}]},options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false,font:{size:10}}}}}});
+ }
+ const cnt=(a)=>{const c={};a.forEach(v=>c[v]=(c[v]||0)+1);return c};
+ const intBar=(parent,title,sub,vals,color,xl)=>{const c=cnt(vals);const ks=Object.keys(c).map(Number).sort((a,b)=>a-b);const lo=ks[0],hi=ks[ks.length-1];const labs=[];for(let i=lo;i<=hi;i++)labs.push(i);bar(parent,title,sub,labs,[{label:'数量',data:labs.map(k=>c[k]||0),backgroundColor:color}])};
+ // ---- box
+ sizeChart('obsBox','box','#b07c48');
+ {const b=by('box');
+  const e=[0,1,2,3,4,5,6,8,10,12];bar('obsBox','盒子 下方覆盖的箭头数','顶层箭头；横轴 = 被盖住的箭头条数',['0'],[{label:'盒子数',data:[b.filter(x=>x.below===0).length],backgroundColor:'#b07c48'}]);
+  const bn=b.filter(x=>!x.under_elevator&&x.below_nested!=null);
+  intBar('obsBox','盒子 压住下层嵌套箭头数','只含顶层盒子；横轴 = 压住的电梯下层箭头条数；0 表示未叠在电梯上',bn.map(x=>x.below_nested),'#cfa77a');
+  const eh=[0,10,20,30,40,60,80,100,150];bar('obsBox','盒子 消除条件分布（health）','需要清除的箭头数；盒子数（实例）',mk(eh),[{label:'盒子数',data:hist(b.map(x=>x.health),eh),backgroundColor:'#b07c48'}]);
+  const er=[0,0.1,0.2,0.3,0.4,0.5,0.6,0.8,1.01];bar('obsBox','盒子 health 占全关箭头比例','ratio = health ÷ 该关箭头数',er.slice(0,-1).map((v,i)=>Math.round(v*100)+'–'+Math.min(100,Math.round(er[i+1]*100))+'%'),[{label:'盒子数',data:hist(b.map(x=>x.cond_ratio),er),backgroundColor:'#c9a26f'}]);
+ }
+ // ---- pipe
+ sizeChart('obsPipe','pipe','#607d8b');
+ {const p=by('pipe');const eP=[0,10,15,20,25,30,40,60,120];
+  bar('obsPipe','水管 路径长度分布（占用格数）','水管数（实例）',mk(eP),[{label:'水管数',data:hist(p.map(x=>x.cells),eP),backgroundColor:'#607d8b'}]);
+  intBar('obsPipe','水管 消除条件分布（health）','被箭头穿过的次数；水管数（实例）',p.map(x=>x.health),'#90a4ae');
+  const c=cnt(p.map(x=>x.turns>=3?'≥3 转弯':x.turns+' 转弯'));const ks=['0 转弯','1 转弯','2 转弯','≥3 转弯'];bar('obsPipe','水管 形状（转弯数）','水管数（实例）',ks,[{label:'水管数',data:ks.map(k=>c[k]||0),backgroundColor:'#78909c'}]);
+ }
+ // ---- elevator
+ sizeChart('obsElev','elevator','#7c4dff');
+ {const e=by('elevator');const eb=[0,5,10,15,20,30,40,60,100];
+  bar('obsElev','电梯 下方覆盖的箭头数','电梯 items 里的嵌套箭头条数；电梯数（实例）',mk(eb),[{label:'电梯数',data:hist(e.map(x=>x.below),eb),backgroundColor:'#7c4dff'}]);
+  bar('obsElev','电梯 消除条件分布（上层待清箭头数）','必须先移走的顶层箭头条数；电梯数（实例）',mk(eb),[{label:'电梯数',data:hist(e.map(x=>x.cond),eb),backgroundColor:'#a78bfa'}]);
+  {const cv=box('obsElev','电梯 上层待清箭头 vs 下层箭头','每个点是一个电梯');new Chart(cv,{type:'scatter',data:{datasets:[{label:'电梯',data:e.map(x=>({x:x.cond,y:x.below})),backgroundColor:'#7c4dff',pointRadius:2.6}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'上层待清箭头数（消除条件）'},beginAtZero:true},y:{title:{display:true,text:'下层覆盖的箭头数'},beginAtZero:true}}}})}
+  const eS=[0,0.05,0.1,0.15,0.2,0.3,0.5,1.01];bar('obsElev','电梯 占棋盘比例','电梯数（实例）',eS.slice(0,-1).map((v,i)=>Math.round(v*100)+'–'+Math.min(100,Math.round(eS[i+1]*100))+'%'),[{label:'电梯数',data:hist(e.map(x=>x.share),eS),backgroundColor:'#b9a3fb'}]);
+ }
+ // ---- curtain
+ sizeChart('obsCurt','curtain','#c62828');
+ {const c=by('curtain');const eb=[0,5,10,15,20,30,40,70];
+  bar('obsCurt','幕布 下方覆盖的箭头数','被盖住的顶层箭头条数；幕布数（实例）',mk(eb),[{label:'幕布数',data:hist(c.map(x=>x.below),eb),backgroundColor:'#c62828'}]);
+  intBar('obsCurt','幕布 消除条件分布（累计钥匙数）','解开该幕布时累计需要的钥匙数（按 order 累计）；幕布数（实例）',c.map(x=>x.cum_keys),'#e57373');
+  const per={};c.forEach(x=>per[x.gid]=(per[x.gid]||0)+1);intBar('obsCurt','幕布 每关幕布数','一关里的幕布个数（= 该关钥匙总数）；关卡数',Object.values(per),'#ef9a9a');
+  {const cv=box('obsCurt','幕布 下层覆盖箭头 vs 累计钥匙数','每个点是一块幕布');new Chart(cv,{type:'scatter',data:{datasets:[{label:'幕布',data:c.map(x=>({x:x.cum_keys+(Math.random()-.5)*.3,y:x.below})),backgroundColor:'#c62828',pointRadius:2.6}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'累计钥匙数（带轻微抖动避免重叠）'}},y:{title:{display:true,text:'覆盖的箭头数'},beginAtZero:true}}}})}
+ }
+ // ---- overall
+ {const cv=box('obsAll','覆盖箭头数对比（盒子 / 电梯 / 幕布）','below 的中位数 / 最大值',null);
+  const bl=k=>by(k).map(x=>x.below);
+  new Chart(cv,{type:'bar',data:{labels:['盒子','电梯','幕布'],datasets:[{label:'中位数',data:[median(bl('box')),median(bl('elevator')),median(bl('curtain'))],backgroundColor:'#64748b'},{label:'最大值',data:[Math.max(...bl('box')),Math.max(...bl('elevator')),Math.max(...bl('curtain'))],backgroundColor:'#cbd5e1'}]},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});}
+ {const cv=box('obsAll','每关障碍实例数','横轴是同一关里该元素的个数',null);const per=k=>{const c={},g={};by(k).forEach(x=>g[x.gid]=(g[x.gid]||0)+1);Object.values(g).forEach(v=>c[v]=(c[v]||0)+1);return c};
   const ps=K.map(a=>per(a[0]));const mx=Math.max(...ps.map(p=>Math.max(...Object.keys(p).map(Number))));const labs=[...Array(mx).keys()].map(i=>i+1);
-  new Chart(cv,{type:'bar',data:{labels:labs,datasets:K.map((a,i)=>({label:a[1].split(' ')[0],data:labs.map(n=>ps[i][n]||0),backgroundColor:['#b07c48','#607d8b','#7c4dff'][i]}))},options:{maintainAspectRatio:false,scales:{x:{title:{display:true,text:'该元素在一关里的个数'}},y:{beginAtZero:true,title:{display:true,text:'关卡数'}}}}})}
- {const cv=box('obs','占棋盘比例中位数（按 50 关分段）','A 与 C 集合，只含有该元素的分段');const segs=[];for(let a=1;a<300;a+=50)segs.push([a,a+49]);for(let a=501;a<700;a+=50)segs.push([a,a+49]);
-  new Chart(cv,{type:'line',data:{labels:segs.map(s=>s[0]+'–'+s[1]),datasets:K.map((a,i)=>({label:a[1].split(' ')[0],data:segs.map(s=>{const v=by(a[0]).filter(x=>x.gid>=s[0]&&x.gid<=s[1]).map(x=>x.share*100);return v.length?Math.round(median(v)*10)/10:null}),borderColor:['#b07c48','#607d8b','#7c4dff'][i],spanGaps:false,tension:.2}))},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,title:{display:true,text:'占棋盘比例 %'}}}}})}
+  new Chart(cv,{type:'bar',data:{labels:labs,datasets:K.map((a,i)=>({label:a[1].split(' ')[0],data:labs.map(n=>ps[i][n]||0),backgroundColor:a[2]}))},options:{maintainAspectRatio:false,scales:{x:{title:{display:true,text:'该元素在一关里的个数'}},y:{beginAtZero:true,title:{display:true,text:'关卡数'}}}}})}
+ {const cv=box('obsAll','占棋盘比例中位数（按 50 关分段）','A 与 C 集合，只含有该元素的分段',null);const segs=[];for(let a=1;a<300;a+=50)segs.push([a,a+49]);for(let a=501;a<700;a+=50)segs.push([a,a+49]);
+  new Chart(cv,{type:'line',data:{labels:segs.map(s=>s[0]+'–'+s[1]),datasets:K.map(a=>({label:a[1].split(' ')[0],data:segs.map(s=>{const v=by(a[0]).filter(x=>x.gid>=s[0]&&x.gid<=s[1]).map(x=>x.share*100);return v.length?Math.round(median(v)*10)/10:null}),borderColor:a[2],spanGaps:false,tension:.2}))},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,title:{display:true,text:'占棋盘比例 %'}}}}})}
 });
 function collections_count(a){const c={};a.forEach(v=>c[v]=(c[v]||0)+1);return c}
 </script></body></html>
