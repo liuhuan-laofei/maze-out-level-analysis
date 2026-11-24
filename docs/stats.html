@@ -16,6 +16,11 @@
 <div><h3>棋盘格数 Top 10</h3><div class="tbl"><table id="tArea"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 area = W × H 降序取前 10；同值按主线编号升序</div><dl><dt>W / H</dt><dd>棋盘宽 / 高（格）</dd></dl></div></details></div><div><h3>占用率 Top 10</h3><div class="tbl"><table id="tDens"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">按 density = arrow_cells ÷ (W × H) 降序取前 10；同值按主线编号升序</div><dl><dt>arrow_cells</dt><dd>顶层箭头占用的格子总数</dd><dt>W × H</dt><dd>棋盘总格数</dd></dl><div class="w">大量关卡的占用率都是 100%，并列时只按编号排，所以这张榜参考价值有限。</div></div></details></div></div>
 <h2>6. 每 50 关分段均值</h2>
 <div class="tbl"><table id="tBucket"></table></div><details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">每列 = 该 50 关内逐关指标的算术平均（最后一段 751–760 只有 10 关）</div><dl><dt>箭头</dt><dd>arrows 的平均</dd><dt>棋盘格</dt><dd>area = W × H 的平均</dd><dt>占用率</dt><dd>density = arrow_cells ÷ (W × H) 的平均（各关占用率再取均值，不按面积加权）</dd><dt>深度</dt><dd>depth 的平均（760 关全部可清空）</dd><dt>平均长度</dt><dd>len_mean 的平均，是“各关均值再取均值”，不按箭头数加权</dd><dt>特殊元素种类</dt><dd>special_kinds（0–7）的平均</dd><dt>含特殊元素</dt><dd>special_kinds > 0 的关数 / 该段关卡数</dd><dt>有倒计时关数</dt><dd>durationInSeconds > 0 的关数 / 该段里有配置的关数。分母不含没有配置的关（E 集合 October 没有 duration 配置，显示“无配置”）</dd><dt>平均时限（秒）</dt><dd>该段里 durationInSeconds > 0 的关的时限算术平均；0 表示无倒计时，不参与平均；全段无倒计时则显示 —</dd></dl></div></details>
+<h2>7. 障碍元素的尺寸与分布（盒子 / 水管 / 电梯）</h2>
+<p class="mut small">按“实例”统计，包含电梯下层嵌套的盒子和水管（盒子 2 个、水管 8 个）。尺寸用占用格数和外接矩形（宽×高）表示，位置用外接矩形中心占棋盘的比例表示。数据在 <a href="data/obstacles.json">obstacles.json</a>。</p>
+<div class="tbl"><table id="obsTbl"></table></div>
+<details class="how"><summary>这张表怎么算</summary><div class="b"><div class="f">cells = 元素占用的格子数\n外接矩形 w×h = (max x − min x + 1) × (max y − min y + 1)\n占棋盘比例 share = cells ÷ (W × H)\n贴边 edge = 外接矩形碰到棋盘任一边界</div><dl><dt>实例</dt><dd>元素个数，同一关里多个按多个算</dd><dt>health</dt><dd>盒子：需要清除的箭头数；水管：能被穿过的次数。电梯没有 health</dd><dt>矩形占比</dt><dd>cells = w × h 的实例占比，100% 说明形状是实心矩形</dd><dt>中位 / 均值</dt><dd>对全部实例计算，不按关卡加权</dd></dl></div></details>
+<div class="grid g2" id="obs"></div>
 <footer>数据来源：安装包内置关卡，自绘分析。完整指标见 <a href="data/stats.csv">stats.csv</a>。</footer>
 </main>
 <script src="assets/chart.umd.min.js"></script><script src="assets/common.js"></script>
@@ -51,6 +56,18 @@ const HELP={
 '最常见的棋盘尺寸 Top 12':F('统计每种 “W×H” 出现的关数，取前 12')+DL([['W×H','棋盘宽 × 高'],['柱高','使用该尺寸的关卡数']])+'含义：设计时常用的版面规格。',
 '配置时限分布（秒，0=无限制）':'数据来源：配置里的 <code>durationInSeconds</code>，不是计算值。'+F('柱高 = #{ 关卡 : durationInSeconds = t }')+DL([['t','时限秒数；0 表示无限制'],['范围','A、B、C、D 集合；E 集合无配置，不计入']]),
 };
+
+Object.assign(HELP,{
+'盒子 占用格数分布':F('柱高 = #{ 盒子 : lo ≤ cells < hi }')+DL([['cells','盒子占用的格子数，均为实心矩形'],['[lo, hi)','区间，左闭右开']])+'含义：盒子大小的分布，中位约 32 格；最常见的是 4×4、6×6、3×3、3×6。',
+'盒子 health 与占用格数':'每个点是一个盒子：'+DL([['横轴','cells：占用格数'],['纵轴','health：需清除的箭头数']])+W('两者没有对应关系（health = cells 的只有 5 个）。health 更像按全关箭头总数设定：352/353 个盒子的 health 不超过该关箭头数。'),
+'水管 路径长度分布':F('柱高 = #{ 水管 : lo ≤ cells < hi }')+DL([['cells','水管占用的格子数，即路径长度'],['[lo, hi)','区间，左闭右开']])+'含义：中位 19 格，最短 5 格，最长 105 格。',
+'水管 形状（转弯数）':F('turns = #{ j : 方向(j→j+1) ≠ 方向(j-1→j) }')+DL([['0-turn','直线'],['1-turn / 2-turn','L 形 / U 形（含 Z 形）'],['≥3','多次折弯']])+'含义：2 转弯的 U 形最多，直线只有 21 条。',
+'水管 health 分布':F('柱高 = #{ 水管 : health = v }')+DL([['health','水管可被箭头穿过的次数，穿满后破碎']])+'含义：中位 4 次，最大 14 次。',
+'电梯 占用格数分布':F('柱高 = #{ 电梯 : lo ≤ cells < hi }')+DL([['cells','电梯覆盖的格数，均为实心矩形']])+'含义：中位 144 格，最大 936 格；电梯体量明显大于盒子和水管。',
+'电梯 占棋盘比例':F('share = cells ÷ (W × H)')+DL([['cells','电梯占用格数'],['W × H','棋盘总格数']])+'含义：中位约 15%；最大为 #507 的 100%（整盘都是电梯）。',
+'每关障碍实例数':F('柱高 = #{ 含该元素的关卡 : 该元素个数 = n }')+DL([['n','同一关里该元素的实例数']])+'含义：多数关卡每种元素 1–4 个，盒子最多一关 12 个。',
+'占棋盘比例中位数（按 50 关分段）':F('点值 = median{ share : 该段内的实例 }\nshare = cells ÷ (W × H)')+DL([['分段','A 集合按 1–50、51–100…；C 集合按 501–550…'],['median','中位数，减少个别巨型实例的影响']])+W('只画有该元素的分段；样本少的段（如 A 的 1–50 只有 1 个盒子）参考价值低。'),
+});
 function howHTML(t){return HELP[t]?`<details class="how"><summary>这张图怎么算</summary><div class="b">${HELP[t]}</div></details>`:''}
 function box(parent,title,desc){const d=document.createElement('div');d.className='chart';d.innerHTML=`<h3>${title}</h3><p>${desc||''}</p><div class="box"><canvas></canvas></div>${howHTML(title)}`;document.getElementById(parent).appendChild(d);return d.querySelector('canvas')}
 const ECOL={band:'#00c853',key:'#ffc800',curtain:'#c62828',pipe:'#607d8b',box:'#b07c48',corner:'#ab47bc',elevator:'#7c4dff'};
@@ -109,4 +126,29 @@ loadStats().then(d=>{R=d;
  topTable('tDepth','depth','深度',x=>!x.total_stuck);topTable('tArrows','arrows','箭头数');topTable('tArea','area','格数');topTable('tDens','density','占用率');
  document.getElementById('tBucket').innerHTML='<tr><th>主线编号</th><th class="n">箭头</th><th class="n">棋盘格</th><th class="n">占用率</th><th class="n">深度</th><th class="n">平均长度</th><th class="n">特殊元素种类</th><th class="n">含特殊元素</th><th class="n">有倒计时关数</th><th class="n">平均时限（秒）</th></tr>'+bk.map(b=>{const r=R.filter(x=>x.global_id>=b[0]&&x.global_id<=b[1]);return `<tr><td>${b[0]}–${b[1]}</td><td class="n">${f1(mean(r.map(x=>x.arrows)))}</td><td class="n">${f1(mean(r.map(x=>x.area)))}</td><td class="n">${pct(mean(r.map(x=>x.density)))}</td><td class="n">${f1(mean(r.map(x=>x.depth)))}</td><td class="n">${f2(mean(r.map(x=>x.len_mean)))}</td><td class="n">${f2(mean(r.map(x=>x.special_kinds)))}</td><td class="n">${r.filter(x=>x.special_kinds>0).length}/${r.length}</td>${(()=>{const c=r.filter(x=>x.cfg_duration!=null),tm=c.filter(x=>x.cfg_duration>0);return `<td class="n">${c.length?tm.length+'/'+c.length:'无配置'}${c.length&&c.length<r.length?'（另 '+(r.length-c.length)+' 关无配置）':''}</td><td class="n">${tm.length?Math.round(mean(tm.map(x=>x.cfg_duration))):'—'}</td>`})()}</tr>`}).join('');
 });
+
+fetch('data/obstacles.json').then(r=>r.json()).then(O=>{
+ const K=[['box','盒子 Box'],['pipe','水管 Pipe'],['elevator','电梯 Elevator']];
+ const by=k=>O.filter(r=>r.kind===k);
+ const q=(a,p)=>{const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor(p*(s.length-1)+.5))]};
+ const rowOf=(name,k)=>{const r=by(k),c=r.map(x=>x.cells),h=r.filter(x=>x.health!=null).map(x=>x.health);
+  return `<tr><td>${name}</td><td class="n">${r.length}</td><td class="n">${new Set(r.map(x=>x.gid)).size}</td><td class="n">${Math.min(...c)} / ${median(c)} / ${f1(mean(c))} / ${Math.max(...c)}</td><td class="n">${median(r.map(x=>x.w))}×${median(r.map(x=>x.h))}（最大 ${Math.max(...r.map(x=>x.w))}×${Math.max(...r.map(x=>x.h))}）</td><td class="n">${h.length?Math.min(...h)+' / '+median(h)+' / '+f1(mean(h))+' / '+Math.max(...h):'—'}</td><td class="n">${pct(median(r.map(x=>x.share)))}</td><td class="n">${pct(r.filter(x=>x.rect).length/r.length)}</td><td class="n">${pct(r.filter(x=>x.edge).length/r.length)}</td><td class="n">${r.filter(x=>x.under_elevator).length}</td></tr>`};
+ document.getElementById('obsTbl').innerHTML='<tr><th>元素</th><th class="n">实例数</th><th class="n">关卡数</th><th class="n">占用格 最小/中位/均值/最大</th><th class="n">外接矩形 中位（最大）</th><th class="n">health 最小/中位/均值/最大</th><th class="n">占棋盘比例 中位</th><th class="n">矩形占比</th><th class="n">贴边占比</th><th class="n">位于电梯下层</th></tr>'+K.map(a=>rowOf(a[1],a[0])).join('');
+ const mkEdges=(a)=>a.slice(0,-1).map((v,i)=>v+'–'+(a[i+1]-1));
+ const eB=[0,10,16,25,36,50,70,100,150,300],eP=[0,10,15,20,25,30,40,60,120],eE=[0,50,100,150,200,300,500,1000];
+ bar('obs','盒子 占用格数分布','盒子数（实例）',mkEdges(eB),[{label:'盒子数',data:hist(by('box').map(x=>x.cells),eB),backgroundColor:'#b07c48'}]);
+ {const cv=box('obs','盒子 health 与占用格数','每个点是一个盒子');new Chart(cv,{type:'scatter',data:{datasets:[{label:'盒子',data:by('box').map(x=>({x:x.cells,y:x.health})),backgroundColor:'#b07c48',pointRadius:2.6}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'占用格数'}},y:{title:{display:true,text:'health（需清除箭头数）'},beginAtZero:true}}}})}
+ bar('obs','水管 路径长度分布','水管数（实例）',mkEdges(eP),[{label:'水管数',data:hist(by('pipe').map(x=>x.cells),eP),backgroundColor:'#607d8b'}]);
+ {const c=collections_count(by('pipe').map(x=>x.turns>=3?'≥3 转弯':x.turns+' 转弯'));const ks=['0 转弯','1 转弯','2 转弯','≥3 转弯'];bar('obs','水管 形状（转弯数）','水管数（实例）',ks,[{label:'水管数',data:ks.map(k=>c[k]||0),backgroundColor:'#78909c'}])}
+ {const c=collections_count(by('pipe').map(x=>x.health));const ks=Object.keys(c).map(Number).sort((a,b)=>a-b);bar('obs','水管 health 分布','水管数（实例）',ks,[{label:'水管数',data:ks.map(k=>c[k]),backgroundColor:'#90a4ae'}])}
+ bar('obs','电梯 占用格数分布','电梯数（实例）',mkEdges(eE),[{label:'电梯数',data:hist(by('elevator').map(x=>x.cells),eE),backgroundColor:'#7c4dff'}]);
+ const eS=[0,0.05,0.1,0.15,0.2,0.3,0.5,1.01];
+ bar('obs','电梯 占棋盘比例','电梯数（实例）',eS.slice(0,-1).map((v,i)=>Math.round(v*100)+'–'+Math.min(100,Math.round(eS[i+1]*100))+'%'),[{label:'电梯数',data:hist(by('elevator').map(x=>x.share),eS),backgroundColor:'#a78bfa'}]);
+ {const cv=box('obs','每关障碍实例数','横轴是同一关里该元素的个数');const per=k=>{const c={};const g={};by(k).forEach(x=>g[x.gid]=(g[x.gid]||0)+1);Object.values(g).forEach(v=>c[v]=(c[v]||0)+1);return c};
+  const ps=K.map(a=>per(a[0]));const mx=Math.max(...ps.map(p=>Math.max(...Object.keys(p).map(Number))));const labs=[...Array(mx).keys()].map(i=>i+1);
+  new Chart(cv,{type:'bar',data:{labels:labs,datasets:K.map((a,i)=>({label:a[1].split(' ')[0],data:labs.map(n=>ps[i][n]||0),backgroundColor:['#b07c48','#607d8b','#7c4dff'][i]}))},options:{maintainAspectRatio:false,scales:{x:{title:{display:true,text:'该元素在一关里的个数'}},y:{beginAtZero:true,title:{display:true,text:'关卡数'}}}}})}
+ {const cv=box('obs','占棋盘比例中位数（按 50 关分段）','A 与 C 集合，只含有该元素的分段');const segs=[];for(let a=1;a<300;a+=50)segs.push([a,a+49]);for(let a=501;a<700;a+=50)segs.push([a,a+49]);
+  new Chart(cv,{type:'line',data:{labels:segs.map(s=>s[0]+'–'+s[1]),datasets:K.map((a,i)=>({label:a[1].split(' ')[0],data:segs.map(s=>{const v=by(a[0]).filter(x=>x.gid>=s[0]&&x.gid<=s[1]).map(x=>x.share*100);return v.length?Math.round(median(v)*10)/10:null}),borderColor:['#b07c48','#607d8b','#7c4dff'][i],spanGaps:false,tension:.2}))},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,title:{display:true,text:'占棋盘比例 %'}}}}})}
+});
+function collections_count(a){const c={};a.forEach(v=>c[v]=(c[v]||0)+1);return c}
 </script></body></html>
